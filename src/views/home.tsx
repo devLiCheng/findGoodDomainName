@@ -1,3 +1,4 @@
+import { raw } from 'hono/html'
 import { t, type Lang, i18nData } from './i18n'
 
 interface HomeProps {
@@ -55,8 +56,8 @@ export function HomePage({ lang = 'zh', user, favoritedDomains = [] }: HomeProps
         <div class="results" id="resultArea"></div>
       </div>
 
-      {/* Data injection — clean, no inline code */}
-      <script>{`window.__I18N__ = ${safeI18n};window.__FAVS__ = ${safeFavs};window.__UID__ = ${user ? user.id : 'null'};window.__LANG__ = '${lang}';`}</script>
+      {/* Data injection */}
+      <script>{raw(`window.__I18N__ = ${safeI18n};window.__FAVS__ = ${safeFavs};window.__UID__ = ${user ? user.id : 'null'};window.__LANG__ = '${lang}';`)}</script>
       <script src="/app.js"></script>
     </div>
   )
