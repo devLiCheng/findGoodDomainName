@@ -41,7 +41,8 @@ fi
 # Step 2: Install deps if needed
 if [ ! -d "node_modules" ]; then
   echo "[2/6] Installing dependencies..."
-  bun install --frozen-lockfile 2>/dev/null || bun install
+  rm -f bun.lock
+  bun install
 else
   echo "[2/6] Dependencies already installed."
 fi
@@ -134,7 +135,8 @@ fi
 cd app
 
 # Install dependencies
-bun install --production
+rm -f bun.lock
+bun install
 
 # Create data directory
 mkdir -p data

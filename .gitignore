@@ -36,5 +36,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # SQLite database
 data/
 
-# Deployment packages
+# Bun lockfile (architecture-specific)
+bun.lock
 deploy-*.tar.gz

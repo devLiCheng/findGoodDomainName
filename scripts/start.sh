@@ -19,7 +19,9 @@ echo "   Bun: $(bun --version)"
 
 # 2. Install dependencies
 echo "[2/4] Installing dependencies..."
-bun install --production
+rm -f bun.lock
+rm -rf node_modules
+bun install
 
 # 3. Create .env if not exists
 echo "[3/4] Configuring environment..."
