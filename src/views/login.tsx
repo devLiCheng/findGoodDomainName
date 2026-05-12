@@ -1,5 +1,4 @@
-import type { Lang } from './layout'
-import { i18nData } from './layout'
+import { t, type Lang } from './i18n'
 
 interface LoginProps {
   lang?: Lang
@@ -8,18 +7,14 @@ interface LoginProps {
   mode?: 'login' | 'register'
 }
 
-function t(lang: Lang, key: string): string {
-  return (i18nData as any)[lang]?.[key] || (i18nData as any).en[key] || key
-}
-
 export function LoginPage({ lang = 'zh', error, redirect = '/', mode = 'login' }: LoginProps) {
   const i18n = (key: string) => t(lang, key)
   const isLogin = mode === 'login'
 
   return (
-    <div class="auth-form">
+    <div class="auth-wrap">
       <h2>{isLogin ? i18n('login') : i18n('register')}</h2>
-      {error && <div class="error-msg">{error}</div>}
+      {error && <div class="error-box" style="margin-bottom:16px;">{error}</div>}
       <form method="POST" action={isLogin ? '/login' : '/register'}>
         {redirect && redirect !== '/' && <input type="hidden" name="redirect" value={redirect} />}
         <div class="form-group">
@@ -30,7 +25,7 @@ export function LoginPage({ lang = 'zh', error, redirect = '/', mode = 'login' }
           <label>{i18n('password')}</label>
           <input type="password" name="password" required minlength={6} placeholder="******" />
         </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;">{isLogin ? i18n('login') : i18n('register')}</button>
+        <button type="submit" class="btn btn-primary">{isLogin ? i18n('login') : i18n('register')}</button>
       </form>
       <div class="auth-link">
         {isLogin ? (
