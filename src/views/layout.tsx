@@ -19,9 +19,6 @@ export function Layout({ children, title, currentUrl, user, lang = 'zh' }: Layou
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{title ? `${title} — ${i18n('title')}` : i18n('title')}</title>
         <meta name="description" content={i18n('subtitle')} />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet" />
         <style>{`
           :root {
             --bg: #0a0a0a;
@@ -39,9 +36,9 @@ export function Layout({ children, title, currentUrl, user, lang = 'zh' }: Layou
             --green-dim: rgba(90, 158, 111, 0.12);
             --red: #c55555;
             --red-dim: rgba(197, 85, 85, 0.1);
-            --font-display: 'Playfair Display', Georgia, serif;
-            --font-body: 'DM Sans', -apple-system, sans-serif;
-            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+            --font-display: Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif;
+            --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', 'Source Code Pro', monospace;
           }
           *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
           html { font-size: 16px; }

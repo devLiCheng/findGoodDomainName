@@ -42,8 +42,20 @@ sleep 1
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
+# Auto-find free port
 PORT="${PORT:-3000}"
-nohup bun run index.ts > /var/log/findgooddomain.log 2>&1 &
+while lsof -i :$PORT > /dev/null 2>&1 || ss -tlnp "sport = :$PORT" 2>/dev/null | grep -q ":$PORT"; do
+  echo "   Port $PORT is in use, trying $((PORT+1))..."
+  PORT=$((PORT+1))
+  if [ $PORT -gt 3020 ]; then
+    echo "   Error: No free port found in range 3000-3020"
+    exit 1
+  fi
+done
+export PORT
+
+echo "   Using port $PORT"
+PORT=$PORT nohup bun run index.ts > /var/log/findgooddomain.log 2>&1 &
 PID=$!
 
 sleep 2
