@@ -20,10 +20,23 @@ if [ -z "$SSH_PASS" ]; then
   SSH_PASS="5gvR17fk2z"
 fi
 
-# Step 1: Build check
-echo "[1/6] Checking local build..."
+# Step 1: Check/install bun
+echo "[1/6] Checking bun..."
 cd "$(dirname "$0")/.."
-bun --version > /dev/null 2>&1 || { echo "Error: bun is not installed. Install with: curl -fsSL https://bun.sh/install | bash"; exit 1; }
+
+if ! command -v bun &> /dev/null; then
+  echo "   Bun not found, installing..."
+  curl -fsSL https://bun.sh/install | bash
+  export BUN_INSTALL="$HOME/.bun"
+  export PATH="$BUN_INSTALL/bin:$PATH"
+  if ! command -v bun &> /dev/null; then
+    echo "Error: bun installation failed"
+    exit 1
+  fi
+  echo "   Bun installed: $(bun --version)"
+else
+  echo "   Bun found: $(bun --version)"
+fi
 
 # Step 2: Install deps if needed
 if [ ! -d "node_modules" ]; then
