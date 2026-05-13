@@ -35,6 +35,7 @@ var input=document.getElementById('keywordInput');
 var btn=document.getElementById('submitBtn');
 if(input){
   input.addEventListener('keydown',function(e){if(e.key==='Enter')HS()});
+  if(btn)btn.addEventListener('click',HS);
   document.querySelectorAll('.examples-row button[data-kw]').forEach(function(b){
     b.addEventListener('click',function(){input.value=this.getAttribute('data-kw');input.focus()})
   });
