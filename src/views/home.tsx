@@ -26,7 +26,6 @@ export function HomePage({ lang = 'zh', user, favoritedDomains = [] }: HomeProps
       </section>
 
       <section class="main-section">
-        {/* Mode tabs */}
         <nav class="tabs-row">
           <button class="tab active" data-mode="discover">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -38,17 +37,9 @@ export function HomePage({ lang = 'zh', user, favoritedDomains = [] }: HomeProps
           </button>
         </nav>
 
-        {/* AI Discover panel */}
         <div class="panel active" id="panelDiscover">
           <div class="search-group">
-            <input
-              id="keywordInput"
-              type="text"
-              class="search-input"
-              placeholder={i18n('placeholder')}
-              autocomplete="off"
-              autofocus
-            />
+            <input id="keywordInput" type="text" class="search-input" placeholder={i18n('placeholder')} autocomplete="off" autofocus />
             <button id="submitBtn" class="search-btn">
               <span>{i18n('generate')}</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
@@ -59,18 +50,12 @@ export function HomePage({ lang = 'zh', user, favoritedDomains = [] }: HomeProps
               <button type="button" class="tag" data-kw={kw}>{kw}</button>
             ))}
           </div>
+          <div id="discoverResults" class="panel-results"></div>
         </div>
 
-        {/* Check panel */}
         <div class="panel" id="panelCheck">
           <div class="search-group">
-            <input
-              id="domainCheckInput"
-              type="text"
-              class="search-input"
-              placeholder="example.com"
-              autocomplete="off"
-            />
+            <input id="domainCheckInput" type="text" class="search-input" placeholder="example.com" autocomplete="off" />
             <button id="domainCheckBtn" class="search-btn">
               <span>{lang === 'zh' ? '查询' : 'Check'}</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
@@ -81,10 +66,8 @@ export function HomePage({ lang = 'zh', user, favoritedDomains = [] }: HomeProps
               <button type="button" class="tag" data-chk={d}>{d}</button>
             ))}
           </div>
+          <div id="checkResults" class="panel-results"></div>
         </div>
-
-        {/* Results */}
-        <div id="resultArea"></div>
       </section>
 
       <script>{raw(`window.__I18N__ = ${safeI18n};window.__FAVS__ = ${safeFavs};window.__UID__ = ${user ? user.id : 'null'};window.__LANG__ = '${lang}';`)}</script>

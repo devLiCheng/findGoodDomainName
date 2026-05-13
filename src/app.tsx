@@ -34,12 +34,12 @@ var input=document.getElementById('keywordInput');
 var btn=document.getElementById('submitBtn');
 var dcInput=document.getElementById('domainCheckInput');
 var dcBtn=document.getElementById('domainCheckBtn');
+var drArea=document.getElementById('discoverResults');
+var crArea=document.getElementById('checkResults');
 var loading=false;
-var discoverHTML='',checkHTML='';
 
 function setButtons(d){loading=d;if(btn)btn.disabled=d;if(dcBtn)dcBtn.disabled=d}
 
-// Enter key and click handlers
 if(input){input.addEventListener('keydown',function(e){if(e.key==='Enter')HS()});if(btn)btn.addEventListener('click',HS)}
 if(dcInput)dcInput.addEventListener('keydown',function(e){if(e.key==='Enter')checkDomain()})
 if(dcBtn)dcBtn.addEventListener('click',checkDomain)
@@ -53,7 +53,7 @@ document.querySelectorAll('#panelCheck .tag').forEach(function(b){
   b.addEventListener('click',function(){dcInput.value=this.getAttribute('data-chk');checkDomain()})
 });
 
-// Tab switching - CSS handles display, just toggle active class
+// Tab switching
 document.querySelectorAll('.tab').forEach(function(t){
   t.addEventListener('click',function(){
     document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});
@@ -65,46 +65,41 @@ document.querySelectorAll('.tab').forEach(function(t){
   });
 });
 
-function renderAll(){
-  var h=discoverHTML+checkHTML;
-  if(!h)h='<div class="empty-msg"><p>'+T('emptyResult')+'</p></div>';
-  document.getElementById('resultArea').innerHTML=h
-}
-
 async function HS(){
   if(!U||U==='null'){window.location.href='/login?redirect='+encodeURIComponent(window.location.href);return}
   var raw=input.value.trim();if(!raw||loading)return;
   var kw=raw.split(/[,,\\\\s]+/).map(function(k){return k.trim()}).filter(Boolean);
   if(kw.length===0)return;setButtons(true);
-  discoverHTML='<div class="spinner-wrap"><div class="spinner"></div><p>'+T('loading')+'</p></div>';renderAll();
+  drArea.innerHTML='<div class="spinner-wrap"><div class="spinner"></div><p>'+T('loading')+'</p></div>';
   try{
     var res=await fetch('/api/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:kw,count:12})});
     if(!res.ok){var ed=await res.json().catch(function(){return{}});throw new Error(ed.error||'Request failed')}
     var data=await res.json();buildDiscover(data)
-  }catch(err){discoverHTML='<div class="error-msg">'+T('errorPrefix')+': '+E(err.message)+'</div>'}
-  finally{setButtons(false);renderAll()}
+  }catch(err){drArea.innerHTML='<div class="error-msg">'+T('errorPrefix')+': '+E(err.message)+'</div>'}
+  finally{setButtons(false)}
 }
 function buildDiscover(data){
   var s=data.suggestions,r=data.registered,kw=data.keywords,h='';
   if(kw&&kw.length){h+='<div class="kw-tags">';for(var i=0;i<kw.length;i++)h+='<span class="kw-tag">'+E(kw[i])+'</span>';h+='</div>'}
   if(s&&s.length){h+='<div class="results-section"><h3 class="green">'+T('availableTitle')+'<span class="count">'+s.length+'</span></h3>';for(var j=0;j<s.length;j++)h+=RC(s[j],'available');h+='</div>'}
   if(r&&r.length){h+='<div class="results-section"><h3 class="red">'+T('registeredTitle')+'<span class="count">'+r.length+'</span></h3>';for(var k=0;k<r.length;k++)h+=RC(r[k],'registered');h+='</div>'}
-  discoverHTML=h
+  if(!h)h='<div class="empty-msg"><p>'+T('emptyResult')+'</p></div>';
+  drArea.innerHTML=h
 }
 
 async function checkDomain(){
   if(!U||U==='null'){window.location.href='/login?redirect='+encodeURIComponent(window.location.href);return}
   var domain=dcInput.value.trim().toLowerCase();if(!domain||loading)return;setButtons(true);
-  checkHTML='<div class="spinner-wrap"><div class="spinner"></div><p>'+T('loading')+'</p></div>';renderAll();
+  crArea.innerHTML='<div class="spinner-wrap"><div class="spinner"></div><p>'+T('loading')+'</p></div>';
   try{
     var r=await fetch('/api/check?domain='+encodeURIComponent(domain));
     var d=await r.json();buildCheck(d)
-  }catch(e){checkHTML='<div class="error-msg">'+T('errorPrefix')+': '+E(e.message)+'</div>'}
-  finally{setButtons(false);renderAll()}
+  }catch(e){crArea.innerHTML='<div class="error-msg">'+T('errorPrefix')+': '+E(e.message)+'</div>'}
+  finally{setButtons(false)}
 }
 function buildCheck(d){
   var tld=d.domain.split('.').pop(),cls=d.available?'green':'red',icon=d.available?'&#10003;':'&#10007;',status=d.available?T('availableBadge'):T('registeredBadge');
-  checkHTML='<div class="check-card '+cls+'"><div class="cc-icon">'+icon+'</div><div class="cc-domain">'+E(d.domain)+'</div><div class="cc-status" style="color:var(--'+cls+')">'+status+'</div><div class="cc-meta"><span>.'+tld+'</span></div></div>'
+  crArea.innerHTML='<div class="check-card '+cls+'"><div class="cc-icon">'+icon+'</div><div class="cc-domain">'+E(d.domain)+'</div><div class="cc-status" style="color:var(--'+cls+')">'+status+'</div><div class="cc-meta"><span>.'+tld+'</span></div></div>'
 }
 
 function RC(item,type){

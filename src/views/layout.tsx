@@ -106,6 +106,7 @@ html{font-size:16px}body{font-family:var(--font);background:var(--bg);color:var(
 .tab.active svg{opacity:1;color:var(--accent)}
 .panel{display:none}
 .panel.active{display:block!important}
+.panel-results{padding-top:24px;min-height:80px}
 
 /* Search */
 .search-group{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all .25s}
