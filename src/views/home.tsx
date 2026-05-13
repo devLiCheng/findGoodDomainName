@@ -40,7 +40,7 @@ export function HomePage({ lang = 'zh', user, favoritedDomains = [] }: HomeProps
               autocomplete="off"
               autofocus
             />
-            <button id="submitBtn">{i18n('generate')}</button>
+            <button id="submitBtn"><span>{i18n('generate')}</span></button>
           </div>
           <div class="examples-row">
             <span class="ex-label">{i18n('examples')}</span>
