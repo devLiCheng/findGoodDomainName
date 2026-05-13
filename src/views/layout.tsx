@@ -147,14 +147,15 @@ html{font-size:16px}body{font-family:var(--font);background:var(--bg);color:var(
 .kw-tag{display:inline-block;padding:3px 10px;border-radius:6px;background:var(--accent-bg);color:var(--accent);font-size:.72rem;font-family:var(--font-mono);margin:0 4px 4px 0;border:1px solid rgba(240,192,96,.1)}
 
 /* Domain check result card */
-.check-card{max-width:360px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px 24px;text-align:center}
-.check-card .cc-icon{font-size:3rem;margin-bottom:10px;line-height:1}
-.check-card .cc-domain{font-family:var(--font-mono);font-size:1.3rem;font-weight:600;color:var(--text);margin-bottom:4px;word-break:break-all}
-.check-card .cc-status{font-size:.88rem;font-weight:600;margin-bottom:14px}
-.check-card .cc-meta{display:flex;gap:8px;justify-content:center}
-.check-card .cc-meta span{padding:4px 12px;border-radius:6px;font-size:.7rem;font-weight:600;letter-spacing:.2px}
-.check-card.green{border-color:rgba(96,208,138,.25)}.check-card.green .cc-icon{color:var(--green)}.check-card.green .cc-meta span{background:var(--green-bg);color:var(--green)}
-.check-card.red{border-color:rgba(240,112,112,.2)}.check-card.red .cc-icon{color:var(--red)}.check-card.red .cc-meta span{background:var(--red-bg);color:var(--red)}
+.check-card{max-width:380px;margin:16px auto 0;background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:36px 28px;text-align:center;position:relative;overflow:hidden}
+.check-card::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 50% 0%,var(--accent-bg) 0%,transparent 50%);pointer-events:none}
+.check-card .cc-icon{font-size:3.2rem;margin-bottom:8px;line-height:1;position:relative;z-index:1}
+.check-card .cc-domain{font-family:var(--font-mono);font-size:1.4rem;font-weight:600;color:var(--text);margin-bottom:4px;word-break:break-all;position:relative;z-index:1}
+.check-card .cc-status{font-size:.9rem;font-weight:600;margin-bottom:16px;position:relative;z-index:1;text-transform:uppercase;letter-spacing:.8px}
+.check-card .cc-meta{display:flex;gap:8px;justify-content:center;position:relative;z-index:1}
+.check-card .cc-meta span{padding:5px 14px;border-radius:8px;font-size:.72rem;font-weight:600;letter-spacing:.3px}
+.check-card.green{border-color:rgba(34,197,94,.3)}.check-card.green .cc-icon{color:var(--green)}.check-card.green .cc-meta span{background:var(--green-bg);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.check-card.red{border-color:rgba(239,68,68,.25)}.check-card.red .cc-icon{color:var(--red)}.check-card.red .cc-meta span{background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.15)}
 
 /* Status */
 .spinner-wrap{text-align:center;padding:50px 20px}

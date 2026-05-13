@@ -29,16 +29,31 @@ var F=new Set(window.__FAVS__||[]);
 var U=window.__UID__;
 function T(k){return I[k]||k}
 function E(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
 var input=document.getElementById('keywordInput');
 var btn=document.getElementById('submitBtn');
-if(input){
-  input.addEventListener('keydown',function(e){if(e.key==='Enter')HS()});
-  if(btn)btn.addEventListener('click',HS);
-  document.querySelectorAll('.examples-row button[data-kw]').forEach(function(b){
-    b.addEventListener('click',function(){input.value=this.getAttribute('data-kw');input.focus()})
-  });
-}
-// Tab switching
+var dcInput=document.getElementById('domainCheckInput');
+var dcBtn=document.getElementById('domainCheckBtn');
+var loading=false;
+var discoverHTML='',checkHTML='';
+
+function setButtons(d){loading=d;if(btn)btn.disabled=d;if(dcBtn)dcBtn.disabled=d}
+
+// Enter key and click handlers
+if(input){input.addEventListener('keydown',function(e){if(e.key==='Enter')HS()});if(btn)btn.addEventListener('click',HS)}
+if(dcInput)dcInput.addEventListener('keydown',function(e){if(e.key==='Enter')checkDomain()})
+if(dcBtn)dcBtn.addEventListener('click',checkDomain)
+
+// Example tags
+document.querySelectorAll('#panelDiscover .tag').forEach(function(b){
+  b.addEventListener('click',function(){input.value=this.getAttribute('data-kw');input.focus()})
+});
+// Check hints
+document.querySelectorAll('#panelCheck .tag').forEach(function(b){
+  b.addEventListener('click',function(){dcInput.value=this.getAttribute('data-chk');checkDomain()})
+});
+
+// Tab switching - don't clear results, only toggle panels
 document.querySelectorAll('.tab').forEach(function(t){
   t.addEventListener('click',function(){
     document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});
@@ -46,90 +61,67 @@ document.querySelectorAll('.tab').forEach(function(t){
     var mode=this.getAttribute('data-mode');
     document.getElementById('panelDiscover').style.display=mode==='discover'?'block':'none';
     document.getElementById('panelCheck').style.display=mode==='check'?'block':'none';
-    document.getElementById('resultArea').innerHTML='';
-    if(mode==='discover'){document.getElementById('keywordInput').focus()}
-    else{document.getElementById('domainCheckInput').focus()}
+    if(mode==='discover')input.focus();else dcInput.focus()
   });
 });
-// Domain check hints
-document.querySelectorAll('#panelCheck button[data-chk]').forEach(function(b){
-  b.addEventListener('click',function(){document.getElementById('domainCheckInput').value=this.getAttribute('data-chk');checkDomain()})
-});
-// Domain checker
-var dcInput=document.getElementById('domainCheckInput');
-var dcBtn=document.getElementById('domainCheckBtn');
-if(dcInput)dcInput.addEventListener('keydown',function(e){if(e.key==='Enter')checkDomain()});
-if(dcBtn)dcBtn.addEventListener('click',checkDomain);
-async function checkDomain(){
-  if(!U||U==='null'){window.location.href='/login?redirect='+encodeURIComponent(window.location.href);return}
-  var domain=dcInput.value.trim().toLowerCase();if(!domain)return;
-  var area=document.getElementById('resultArea');
-  area.innerHTML='<div class="spinner-wrap"><div class="spinner"></div><p>'+T('loading')+'</p></div>';
-  try{
-    var r=await fetch('/api/check?domain='+encodeURIComponent(domain));
-    var d=await r.json();
-    var tld=d.domain.split('.').pop();
-    if(d.available){
-      area.innerHTML='<div class="check-card green"><div class="cc-icon">&#10003;</div><div class="cc-domain">'+E(d.domain)+'</div><div class="cc-status" style="color:var(--green)">'+T('availableBadge')+'</div><div class="cc-meta"><span>.'+tld+'</span></div></div>'
-    }else{
-      area.innerHTML='<div class="check-card red"><div class="cc-icon">&#10007;</div><div class="cc-domain">'+E(d.domain)+'</div><div class="cc-status" style="color:var(--red)">'+T('registeredBadge')+'</div><div class="cc-meta"><span>.'+tld+'</span></div></div>'
-    }
-  }catch(e){area.innerHTML='<div class="error-msg">'+T('errorPrefix')+': '+E(e.message)+'</div>'}
+
+function renderAll(){
+  var h=discoverHTML+checkHTML;
+  if(!h)h='<div class="empty-msg"><p>'+T('emptyResult')+'</p></div>';
+  document.getElementById('resultArea').innerHTML=h
 }
+
 async function HS(){
   if(!U||U==='null'){window.location.href='/login?redirect='+encodeURIComponent(window.location.href);return}
-  var raw=input.value.trim();if(!raw)return;
+  var raw=input.value.trim();if(!raw||loading)return;
   var kw=raw.split(/[,,\\\\s]+/).map(function(k){return k.trim()}).filter(Boolean);
-  if(kw.length===0)return;
-  var area=document.getElementById('resultArea');
-  btn.disabled=true;
-  area.innerHTML='<div class="spinner-wrap"><div class="spinner"></div><p>'+T('loading')+'</p></div>';
+  if(kw.length===0)return;setButtons(true);
+  discoverHTML='<div class="spinner-wrap"><div class="spinner"></div><p>'+T('loading')+'</p></div>';renderAll();
   try{
     var res=await fetch('/api/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:kw,count:12})});
     if(!res.ok){var ed=await res.json().catch(function(){return{}});throw new Error(ed.error||'Request failed')}
-    var data=await res.json();RR(data)
-  }catch(err){
-    area.innerHTML='<div class="error-msg">'+T('errorPrefix')+': '+E(err.message)+'</div>'
-  }finally{btn.disabled=false}
+    var data=await res.json();buildDiscover(data)
+  }catch(err){discoverHTML='<div class="error-msg">'+T('errorPrefix')+': '+E(err.message)+'</div>'}
+  finally{setButtons(false);renderAll()}
 }
-function RR(data){
-  var s=data.suggestions,r=data.registered,kw=data.keywords;
-  var h='';
+function buildDiscover(data){
+  var s=data.suggestions,r=data.registered,kw=data.keywords,h='';
   if(kw&&kw.length){h+='<div class="kw-tags">';for(var i=0;i<kw.length;i++)h+='<span class="kw-tag">'+E(kw[i])+'</span>';h+='</div>'}
   if(s&&s.length){h+='<div class="results-section"><h3 class="green">'+T('availableTitle')+'<span class="count">'+s.length+'</span></h3>';for(var j=0;j<s.length;j++)h+=RC(s[j],'available');h+='</div>'}
   if(r&&r.length){h+='<div class="results-section"><h3 class="red">'+T('registeredTitle')+'<span class="count">'+r.length+'</span></h3>';for(var k=0;k<r.length;k++)h+=RC(r[k],'registered');h+='</div>'}
-  if((!s||!s.length)&&(!r||!r.length))h='<div class="empty-msg"><p>'+T('emptyResult')+'</p></div>';
-  document.getElementById('resultArea').innerHTML=h
+  discoverHTML=h
 }
+
+async function checkDomain(){
+  if(!U||U==='null'){window.location.href='/login?redirect='+encodeURIComponent(window.location.href);return}
+  var domain=dcInput.value.trim().toLowerCase();if(!domain||loading)return;setButtons(true);
+  checkHTML='<div class="spinner-wrap"><div class="spinner"></div><p>'+T('loading')+'</p></div>';renderAll();
+  try{
+    var r=await fetch('/api/check?domain='+encodeURIComponent(domain));
+    var d=await r.json();buildCheck(d)
+  }catch(e){checkHTML='<div class="error-msg">'+T('errorPrefix')+': '+E(e.message)+'</div>'}
+  finally{setButtons(false);renderAll()}
+}
+function buildCheck(d){
+  var tld=d.domain.split('.').pop(),cls=d.available?'green':'red',icon=d.available?'&#10003;':'&#10007;',status=d.available?T('availableBadge'):T('registeredBadge');
+  checkHTML='<div class="check-card '+cls+'"><div class="cc-icon">'+icon+'</div><div class="cc-domain">'+E(d.domain)+'</div><div class="cc-status" style="color:var(--'+cls+')">'+status+'</div><div class="cc-meta"><span>.'+tld+'</span></div></div>'
+}
+
 function RC(item,type){
-  var d=item.domain.toLowerCase();
-  var isFav=F.has(d);
-  var favHtml='';
-  if(type==='available'&&U&&U!=='null'){
-    favHtml='<button class="dr-fav'+(isFav?' active':'')+'" data-domain="'+E(item.domain)+'" data-reason="'+E(item.reason||'')+'" data-tld="'+E(item.tld||'')+'">'+(isFav?'\u2605':'\u2606')+'</button>'
-  }
+  var isFav=F.has(item.domain.toLowerCase()),favHtml='';
+  if(type==='available'&&U&&U!=='null')favHtml='<button class="dr-fav'+(isFav?' active':'')+'" data-domain="'+E(item.domain)+'" data-reason="'+E(item.reason||'')+'" data-tld="'+E(item.tld||'')+'">'+(isFav?'\\u2605':'\\u2606')+'</button>'
   return '<div class="domain-row"><span class="dr-domain">'+E(item.domain)+'</span><span class="dr-tld">'+E(item.tld||'')+'</span><span class="dr-reason">'+E(item.reason||'')+'</span><div class="dr-right">'+favHtml+'<span class="dr-badge '+(type==='available'?'green':'red')+'">'+(type==='available'?T('availableBadge'):T('registeredBadge'))+'</span></div></div>'
 }
 async function TF(btn){
-  var isActive=btn.classList.contains('active');
-  var domain=btn.getAttribute('data-domain')||'';
-  var reason=btn.getAttribute('data-reason')||'';
-  var tld=btn.getAttribute('data-tld')||'';
+  var isActive=btn.classList.contains('active'),domain=btn.getAttribute('data-domain')||'',reason=btn.getAttribute('data-reason')||'',tld=btn.getAttribute('data-tld')||'';
   var url=isActive?'/api/favorites/remove':'/api/favorites/add';
   try{
     var res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain:domain,reason:reason,tld:tld})});
-    if(res.ok){
-      if(isActive){btn.classList.remove('active');btn.textContent='\u2606 '+T('favorite');F.delete(domain.toLowerCase())}
-      else{btn.classList.add('active');btn.textContent='\u2605 '+T('favorited');F.add(domain.toLowerCase())}
-    }else if(res.status===401){window.location.href='/login'}
+    if(res.ok){if(isActive){btn.classList.remove('active');btn.textContent='\\u2606';F.delete(domain.toLowerCase())}else{btn.classList.add('active');btn.textContent='\\u2605';F.add(domain.toLowerCase())}}
+    else if(res.status===401)window.location.href='/login'
   }catch(e){}
 }
-// Event delegation for fav buttons
-document.addEventListener('click',function(e){
-  var btn=e.target.closest('.dr-fav');
-  if(btn)TF(btn);
-});
-window.HS=HS;
+document.addEventListener('click',function(e){var btn=e.target.closest('.dr-fav');if(btn)TF(btn)});
 })();`, 200, { 'Content-Type': 'application/javascript; charset=utf-8' })
 })
 
