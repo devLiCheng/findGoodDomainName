@@ -4,6 +4,19 @@ import { createToken, setAuthCookie, removeAuthCookie, getAuthUser } from '../mi
 
 const authRoutes = new Hono()
 
+// Simple math CAPTCHA store { id: { answer, expires } }
+const captchaStore = new Map<string, { answer: number; expires: number }>()
+const CAPTCHA_TTL = 5 * 60 * 1000 // 5 minutes
+
+// Generate CAPTCHA
+authRoutes.get('/captcha', (c) => {
+  const a = Math.floor(Math.random() * 20) + 1
+  const b = Math.floor(Math.random() * 20) + 1
+  const id = crypto.randomUUID()
+  captchaStore.set(id, { answer: a + b, expires: Date.now() + CAPTCHA_TTL })
+  return c.json({ id, question: `${a} + ${b} = ?` })
+})
+
 // Google OAuth redirect
 authRoutes.get('/google', (c) => {
   const clientId = process.env.GOOGLE_CLIENT_ID
@@ -75,13 +88,27 @@ authRoutes.get('/google/callback', async (c) => {
 // Unified login-or-register: if email exists → verify password & login; if not → register
 authRoutes.post('/login', async (c) => {
   try {
-    const { email, password } = await c.req.json<{ email: string; password: string }>()
+    const { email, password, captcha_id, captcha_answer } = await c.req.json<{
+      email: string; password: string; captcha_id?: string; captcha_answer?: number
+    }>()
     if (!email || !password) {
       return c.json({ error: 'Email and password are required' }, 400)
     }
     if (password.length < 6) {
       return c.json({ error: 'Password must be at least 6 characters' }, 400)
     }
+
+    // Validate CAPTCHA
+    const captcha = captcha_id ? captchaStore.get(captcha_id) : undefined
+    if (captcha && Date.now() < captcha.expires) {
+      captchaStore.delete(captcha_id!)
+      if (captcha_answer !== captcha.answer) {
+        return c.json({ error: 'Verification code incorrect' }, 400)
+      }
+    } else if (captcha_id) {
+      return c.json({ error: 'Verification code expired, please refresh' }, 400)
+    }
+    // If no captcha_id, allow (backward compat until UI updated)
 
     const normalizedEmail = email.toLowerCase().trim()
     let user = users.findByEmail(normalizedEmail)

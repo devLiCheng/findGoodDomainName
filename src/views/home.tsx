@@ -43,6 +43,20 @@ export function HomePage({ lang = 'zh', user, favoritedDomains = [] }: HomeProps
         </div>
 
         <div class="results" id="resultArea"></div>
+
+        {/* Domain availability checker */}
+        <div class="domain-check-section">
+          <div class="domain-check-bar">
+            <input
+              id="domainCheckInput"
+              type="text"
+              placeholder={lang === 'zh' ? '或直接查询域名是否可用，如 example.com...' : 'Or check a domain directly, e.g. example.com...'}
+              autocomplete="off"
+            />
+            <button id="domainCheckBtn">{lang === 'zh' ? '查询' : 'Check'}</button>
+          </div>
+          <div id="domainCheckResult" class="check-result" style="display:none;"></div>
+        </div>
       </div>
 
       <script>{raw(`window.__I18N__ = ${safeI18n};window.__FAVS__ = ${safeFavs};window.__UID__ = ${user ? user.id : 'null'};window.__LANG__ = '${lang}';`)}</script>

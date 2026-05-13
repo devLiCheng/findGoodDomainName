@@ -63,6 +63,13 @@ domainRoutes.post('/suggest', async (c) => {
   }
 })
 
+domainRoutes.get('/check', async (c) => {
+  const domain = c.req.query('domain') || ''
+  if (!domain) return c.json({ error: 'Domain required' }, 400)
+  const available = await checkDomain(domain.toLowerCase().trim())
+  return c.json({ domain: domain.toLowerCase().trim(), available })
+})
+
 domainRoutes.get('/health', (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() })
 })

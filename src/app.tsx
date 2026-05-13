@@ -38,6 +38,25 @@ if(input){
     b.addEventListener('click',function(){input.value=this.getAttribute('data-kw');input.focus()})
   });
 }
+// Domain checker
+var dcInput=document.getElementById('domainCheckInput');
+var dcBtn=document.getElementById('domainCheckBtn');
+if(dcInput&&dcBtn){
+  dcInput.addEventListener('keydown',function(e){if(e.key==='Enter')checkDomain()});
+  dcBtn.addEventListener('click',checkDomain);
+}
+async function checkDomain(){
+  if(!U||U==='null'){window.location.href='/login?redirect='+encodeURIComponent(window.location.href);return}
+  var domain=dcInput.value.trim().toLowerCase();if(!domain)return;
+  var area=document.getElementById('domainCheckResult');
+  area.style.display='block';area.className='check-result';area.textContent='...';
+  try{
+    var r=await fetch('/api/check?domain='+encodeURIComponent(domain));
+    var d=await r.json();
+    if(d.available){area.className='check-result avail';area.textContent='\u2705 '+domain+' '+T('availableBadge')}
+    else{area.className='check-result reg';area.textContent='\u274c '+domain+' '+T('registeredBadge')}
+  }catch(e){area.textContent=T('errorPrefix')+': '+e.message}
+}
 async function HS(){
   if(!U||U==='null'){window.location.href='/login?redirect='+encodeURIComponent(window.location.href);return}
   var raw=input.value.trim();if(!raw)return;

@@ -34,6 +34,10 @@ export const i18nData = {
     email: '邮箱',
     save: '保存',
     cancel: '取消',
+    checkDomain: '查询域名',
+    checkPlaceholder: '或直接查询域名，如 example.com...',
+    captcha: '验证码',
+    captchaHint: '请输入运算结果',
   },
   en: {
     title: 'Find Good Domain Name',
@@ -70,6 +74,10 @@ export const i18nData = {
     email: 'Email',
     save: 'Save',
     cancel: 'Cancel',
+    checkDomain: 'Check Domain',
+    checkPlaceholder: 'Or check a domain, e.g. example.com...',
+    captcha: 'Verification',
+    captchaHint: 'Enter the result',
   },
 }
 

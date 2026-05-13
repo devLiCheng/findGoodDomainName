@@ -171,5 +171,16 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .site-footer a:hover{color:var(--accent)}
 .site-footer .sep{opacity:.3}
 
+.domain-check-section{max-width:540px;margin:0 auto 60px;padding-top:12px}
+.domain-check-bar{display:flex;gap:0;border-radius:10px;overflow:hidden;background:var(--bg-input);border:1px solid var(--border);transition:all .2s}
+.domain-check-bar:focus-within{border-color:var(--accent);box-shadow:0 0 16px var(--accent-dim)}
+.domain-check-bar input{flex:1;padding:12px 16px;background:transparent;border:none;color:var(--text);font-size:.82rem;font-family:var(--font-body);outline:none}
+.domain-check-bar input::placeholder{color:var(--text-muted)}
+.domain-check-bar button{padding:12px 22px;background:transparent;border:none;color:var(--text-dim);font-family:var(--font-body);font-size:.78rem;font-weight:500;cursor:pointer;transition:all .12s;border-left:1px solid var(--border)}
+.domain-check-bar button:hover{color:var(--accent);background:var(--accent-dim)}
+.check-result{margin-top:8px;text-align:center;font-size:.8rem;padding:8px;border-radius:8px}
+.check-result.avail{color:var(--green);background:var(--green-dim)}
+.check-result.reg{color:var(--red);background:var(--red-dim)}
+
 @media(max-width:600px){.hero{padding:50px 0 20px}.hero-title{font-size:1.8rem}.search-bar{flex-direction:column}.search-bar button{border-radius:0 0 13px 13px}.topbar{padding:10px 16px;flex-wrap:wrap;gap:6px}.dc-top{flex-wrap:wrap;gap:6px}.profile-header{flex-direction:column;text-align:center}}
 `

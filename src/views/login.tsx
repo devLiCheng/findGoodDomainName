@@ -32,6 +32,7 @@ export function LoginPage({ lang = 'zh', error, redirect = '/', googleClientId }
 
       <form id="loginForm" onsubmit="return handleLogin(event)">
         <input type="hidden" name="redirect" value={redirect} />
+        <input type="hidden" id="captchaId" name="captcha_id" value="" />
         <div class="form-group">
           <label>Email</label>
           <input type="email" name="email" id="lemail" required placeholder="your@email.com" autofocus />
@@ -40,10 +41,22 @@ export function LoginPage({ lang = 'zh', error, redirect = '/', googleClientId }
           <label>{i18n('password')}</label>
           <input type="password" name="password" id="lpass" required minlength={6} placeholder="******" />
         </div>
+        <div class="form-group">
+          <label id="captchaLabel" style="cursor:pointer;" title={lang === 'zh' ? '点击刷新' : 'Click to refresh'}>{lang === 'zh' ? '验证码' : 'Verification'}</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="captchaAnswer" required placeholder={lang === 'zh' ? '请输入结果' : 'Enter answer'} maxlength={4} style="flex:1;padding:11px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:.9rem;font-family:var(--font-body);outline:none;width:120px;" />
+            <span id="captchaQuestion" style="padding:11px 16px;background:var(--bg-input);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:.9rem;font-family:var(--font-mono);white-space:nowrap;cursor:pointer;min-width:100px;text-align:center;">---</span>
+          </div>
+        </div>
         <div id="loginError" class="error-box" style="display:none;margin-bottom:14px;"></div>
         <button type="submit" class="btn btn-primary" id="loginBtn">{i18n('signin')}</button>
       </form>
-      <script>{raw(`async function handleLogin(e){e.preventDefault();var b=document.getElementById('loginBtn');var er=document.getElementById('loginError');b.disabled=true;b.textContent='...';er.style.display='none';try{var r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:document.getElementById('lemail').value,password:document.getElementById('lpass').value})});var d=await r.json();if(r.ok){window.location.href='${redirect}'}else{er.textContent=d.error||'Failed';er.style.display='block'}}catch(ex){er.textContent='Network error';er.style.display='block'}finally{b.disabled=false;b.textContent='${lang === 'zh' ? '登录' : 'Sign in'}'}return false}`)}</script>
+      <script>{raw(`var captchaId='';
+async function loadCaptcha(){try{var r=await fetch('/api/auth/captcha');var d=await r.json();captchaId=d.id;document.getElementById('captchaQuestion').textContent=d.question;document.getElementById('captchaId').value=d.id}catch(e){}}
+document.getElementById('captchaQuestion').addEventListener('click',loadCaptcha);
+document.getElementById('captchaLabel').addEventListener('click',loadCaptcha);
+loadCaptcha();
+async function handleLogin(e){e.preventDefault();var b=document.getElementById('loginBtn');var er=document.getElementById('loginError');b.disabled=true;b.textContent='...';er.style.display='none';try{var answer=parseInt(document.getElementById('captchaAnswer').value);var r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:document.getElementById('lemail').value,password:document.getElementById('lpass').value,captcha_id:document.getElementById('captchaId').value,captcha_answer:answer})});var d=await r.json();if(r.ok){window.location.href='${redirect}'}else{er.textContent=d.error||'Failed';er.style.display='block';loadCaptcha();document.getElementById('captchaAnswer').value=''}}catch(ex){er.textContent='Network error';er.style.display='block'}finally{b.disabled=false;b.textContent='${lang === 'zh' ? '登录' : 'Sign in'}'}return false}`)}</script>
     </div>
   )
 }
