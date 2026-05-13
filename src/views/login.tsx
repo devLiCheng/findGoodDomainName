@@ -29,18 +29,20 @@ export function LoginPage({ lang = 'zh', error, redirect = '/', googleClientId }
         </>
       )}
 
-      <form method="POST" action="/login">
-        {redirect && redirect !== '/' && <input type="hidden" name="redirect" value={redirect} />}
+      <form id="loginForm" onsubmit="return handleLogin(event)">
+        <input type="hidden" name="redirect" value={redirect} />
         <div class="form-group">
           <label>Email</label>
-          <input type="email" name="email" required placeholder="your@email.com" autofocus />
+          <input type="email" name="email" id="lemail" required placeholder="your@email.com" autofocus />
         </div>
         <div class="form-group">
           <label>{i18n('password')}</label>
-          <input type="password" name="password" required minlength={6} placeholder="******" />
+          <input type="password" name="password" id="lpass" required minlength={6} placeholder="******" />
         </div>
-        <button type="submit" class="btn btn-primary">{i18n('signin')}</button>
+        <div id="loginError" class="error-box" style="display:none;margin-bottom:14px;"></div>
+        <button type="submit" class="btn btn-primary" id="loginBtn">{i18n('signin')}</button>
       </form>
+      <script>{`async function handleLogin(e){e.preventDefault();var b=document.getElementById('loginBtn');var er=document.getElementById('loginError');b.disabled=true;b.textContent='...';er.style.display='none';try{var r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:document.getElementById('lemail').value,password:document.getElementById('lpass').value})});var d=await r.json();if(r.ok){window.location.href='${redirect}'}else{er.textContent=d.error||'Failed';er.style.display='block'}}catch(ex){er.textContent='Network error';er.style.display='block'}finally{b.disabled=false;b.textContent='${lang === 'zh' ? '登录' : 'Sign in'}'}return false}`}</script>
     </div>
   )
 }

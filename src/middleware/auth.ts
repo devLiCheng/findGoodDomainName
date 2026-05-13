@@ -18,7 +18,7 @@ export async function getAuthUser(c: Context): Promise<AuthUser | null> {
   const token = getCookie(c, COOKIE_NAME)
   if (!token) return null
   try {
-    const payload = await verify(token, JWT_SECRET) as { id: number; email: string; exp: number }
+    const payload = await verify(token, JWT_SECRET, 'HS256') as { id: number; email: string; exp: number }
     if (payload.id && payload.email) {
       const profile = users.findById(payload.id)
       return {
@@ -53,20 +53,6 @@ export function setAuthCookie(c: Context, token: string) {
 
 export function removeAuthCookie(c: Context) {
   deleteCookie(c, COOKIE_NAME, { path: '/' })
-}
-
-export async function getAuthUser(c: Context): Promise<AuthUser | null> {
-  const token = getCookie(c, COOKIE_NAME)
-  if (!token) return null
-  try {
-    const payload = await verify(token, JWT_SECRET) as { id: number; email: string; exp: number }
-    if (payload.id && payload.email) {
-      return { id: payload.id, email: payload.email }
-    }
-    return null
-  } catch {
-    return null
-  }
 }
 
 // Middleware: require authentication
