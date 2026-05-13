@@ -36,9 +36,7 @@ var dcInput=document.getElementById('domainCheckInput');
 var dcBtn=document.getElementById('domainCheckBtn');
 var drArea=document.getElementById('discoverResults');
 var crArea=document.getElementById('checkResults');
-var loading=false;
-
-function setButtons(d){loading=d;if(btn)btn.disabled=d;if(dcBtn)dcBtn.disabled=d}
+var dLoading=false,cLoading=false;
 
 if(input){input.addEventListener('keydown',function(e){if(e.key==='Enter')HS()});if(btn)btn.addEventListener('click',HS)}
 if(dcInput)dcInput.addEventListener('keydown',function(e){if(e.key==='Enter')checkDomain()})
@@ -67,16 +65,16 @@ document.querySelectorAll('.tab').forEach(function(t){
 
 async function HS(){
   if(!U||U==='null'){window.location.href='/login?redirect='+encodeURIComponent(window.location.href);return}
-  var raw=input.value.trim();if(!raw||loading)return;
+  var raw=input.value.trim();if(!raw||dLoading)return;
   var kw=raw.split(/[,,\\\\s]+/).map(function(k){return k.trim()}).filter(Boolean);
-  if(kw.length===0)return;setButtons(true);
+  if(kw.length===0)return;dLoading=true;if(btn)btn.disabled=true;
   drArea.innerHTML='<div class="spinner-wrap"><div class="spinner"></div><p>'+T('loading')+'</p></div>';
   try{
     var res=await fetch('/api/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:kw,count:12})});
     if(!res.ok){var ed=await res.json().catch(function(){return{}});throw new Error(ed.error||'Request failed')}
     var data=await res.json();buildDiscover(data)
   }catch(err){drArea.innerHTML='<div class="error-msg">'+T('errorPrefix')+': '+E(err.message)+'</div>'}
-  finally{setButtons(false)}
+  finally{dLoading=false;if(btn)btn.disabled=false}
 }
 function buildDiscover(data){
   var s=data.suggestions,r=data.registered,kw=data.keywords,h='';
@@ -89,13 +87,13 @@ function buildDiscover(data){
 
 async function checkDomain(){
   if(!U||U==='null'){window.location.href='/login?redirect='+encodeURIComponent(window.location.href);return}
-  var domain=dcInput.value.trim().toLowerCase();if(!domain||loading)return;setButtons(true);
+  var domain=dcInput.value.trim().toLowerCase();if(!domain||cLoading)return;cLoading=true;if(dcBtn)dcBtn.disabled=true;
   crArea.innerHTML='<div class="spinner-wrap"><div class="spinner"></div><p>'+T('loading')+'</p></div>';
   try{
     var r=await fetch('/api/check?domain='+encodeURIComponent(domain));
     var d=await r.json();buildCheck(d)
   }catch(e){crArea.innerHTML='<div class="error-msg">'+T('errorPrefix')+': '+E(e.message)+'</div>'}
-  finally{setButtons(false)}
+  finally{cLoading=false;if(dcBtn)dcBtn.disabled=false}
 }
 function buildCheck(d){
   var tld=d.domain.split('.').pop(),cls=d.available?'green':'red',icon=d.available?'&#10003;':'&#10007;',status=d.available?T('availableBadge'):T('registeredBadge');
