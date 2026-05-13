@@ -1,10 +1,10 @@
 import { Hono } from 'hono'
-import { getCookie } from 'hono/cookie'
-import { t, type Lang } from './views/i18n'
+import { getCookie, setCookie as setCk } from 'hono/cookie'
+import type { Lang } from './views/i18n'
 import { Layout } from './views/layout'
 import { HomePage } from './views/home'
 import { LoginPage } from './views/login'
-import { FavoritesPage } from './views/favorites'
+import { ProfilePage } from './views/profile'
 import { NewsListPage } from './views/news-list'
 import { NewsDetailPage } from './views/news-detail'
 import { getAuthUser, setAuthCookie, removeAuthCookie, createToken } from './middleware/auth'
@@ -16,13 +16,12 @@ import newsApiRoutes from './routes/news'
 
 const app = new Hono()
 
-// API routes
 app.route('/api', domainRoutes)
 app.route('/api/auth', authApiRoutes)
 app.route('/api/favorites', favoritesApiRoutes)
 app.route('/api/news', newsApiRoutes)
 
-// Client-side JS (served as static asset to avoid JSX escaping issues)
+// Client-side JS
 app.get('/app.js', (c) => {
   return c.body(`(function(){
 var I=window.__I18N__||{};
@@ -30,7 +29,6 @@ var F=new Set(window.__FAVS__||[]);
 var U=window.__UID__;
 function T(k){return I[k]||k}
 function E(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
-
 var input=document.getElementById('keywordInput');
 var btn=document.getElementById('submitBtn');
 if(input){
@@ -40,7 +38,6 @@ if(input){
     b.addEventListener('click',function(){input.value=this.getAttribute('data-kw');input.focus()})
   });
 }
-
 async function HS(){
   var raw=input.value.trim();if(!raw)return;
   var kw=raw.split(/[,,\\\\s]+/).map(function(k){return k.trim()}).filter(Boolean);
@@ -56,7 +53,6 @@ async function HS(){
     area.innerHTML='<div class="error-box">'+T('errorPrefix')+': '+E(err.message)+'</div>'
   }finally{btn.disabled=false}
 }
-
 function RR(data){
   var s=data.suggestions,r=data.registered,kw=data.keywords;
   var h='';
@@ -66,7 +62,6 @@ function RR(data){
   if((!s||!s.length)&&(!r||!r.length))h='<div class="status-box"><p>'+T('emptyResult')+'</p></div>';
   document.getElementById('resultArea').innerHTML=h
 }
-
 function RC(item,type){
   var d=item.domain.toLowerCase();
   var isFav=F.has(d);
@@ -76,7 +71,6 @@ function RC(item,type){
   }
   return '<div class="domain-card"><div class="dc-top"><div><span class="dc-domain">'+E(item.domain)+'</span><span class="dc-tld">'+E(item.tld||'')+'</span></div><div class="dc-right">'+favHtml+'<span class="dc-badge '+(type==='available'?'green':'red')+'">'+(type==='available'?T('availableBadge'):T('registeredBadge'))+'</span></div></div><p class="dc-reason">'+E(item.reason||'')+'</p></div>'
 }
-
 async function TF(btn,domain,reason,tld){
   var isActive=btn.classList.contains('active');
   var url=isActive?'/api/favorites/remove':'/api/favorites/add';
@@ -92,33 +86,32 @@ window.HS=HS;window.TF=TF;
 })();`, 200, { 'Content-Type': 'application/javascript; charset=utf-8' })
 })
 
-// Get language from query param or cookie
 function getLang(c: any): Lang {
   const qLang = c.req.query('lang') as Lang | undefined
-  if (qLang === 'zh' || qLang === 'en') return qLang
+  if (qLang === 'zh' || qLang === 'en') {
+    setCk(c, 'lang', qLang, { maxAge: 365 * 24 * 60 * 60, path: '/' })
+    return qLang
+  }
   const ckLang = getCookie(c, 'lang') as Lang | undefined
   if (ckLang === 'zh' || ckLang === 'en') return ckLang
   const al = c.req.header('Accept-Language') || ''
-  if (al.startsWith('zh')) return 'zh'
-  return 'zh'
+  return al.startsWith('zh') ? 'zh' : 'zh'
 }
 
-// Home page (SSR)
+// Home
 app.get('/', async (c) => {
   const lang = getLang(c)
   const user = await getAuthUser(c)
   let favoritedDomains: string[] = []
-  if (user) {
-    favoritedDomains = Array.from(favorites.getFavoritedDomains(user.id))
-  }
+  if (user) favoritedDomains = Array.from(favorites.getFavoritedDomains(user.id))
   return c.html(
-    <Layout user={user} lang={lang} currentUrl="/">
+    <Layout user={user} lang={lang}>
       <HomePage lang={lang} user={user} favoritedDomains={favoritedDomains} />
     </Layout>
   )
 })
 
-// Login page (SSR)
+// Login page
 app.get('/login', async (c) => {
   const lang = getLang(c)
   const user = await getAuthUser(c)
@@ -127,11 +120,12 @@ app.get('/login', async (c) => {
   const redirect = c.req.query('redirect') || '/'
   return c.html(
     <Layout lang={lang}>
-      <LoginPage lang={lang} error={error} redirect={redirect} mode="login" />
+      <LoginPage lang={lang} error={error} redirect={redirect} />
     </Layout>
   )
 })
 
+// Login POST - unified: existing user = login, new user = auto-register
 app.post('/login', async (c) => {
   const body = await c.req.parseBody()
   const email = String(body.email || '').toLowerCase().trim()
@@ -139,83 +133,57 @@ app.post('/login', async (c) => {
   const redirect = String(body.redirect || '/')
 
   if (!email || !password) {
-    return c.redirect(`/login?error=${encodeURIComponent('请填写邮箱和密码')}&redirect=${encodeURIComponent(redirect)}`)
+    return c.redirect(`/login?error=${encodeURIComponent('Please fill in email and password')}&redirect=${encodeURIComponent(redirect)}`)
+  }
+  if (password.length < 6) {
+    return c.redirect(`/login?error=${encodeURIComponent('Password must be at least 6 characters')}&redirect=${encodeURIComponent(redirect)}`)
   }
 
-  const user = users.findByEmail(email)
-  if (!user) {
-    return c.redirect(`/login?error=${encodeURIComponent('邮箱或密码错误')}&redirect=${encodeURIComponent(redirect)}`)
+  let user = users.findByEmail(email)
+
+  if (user) {
+    const valid = await Bun.password.verify(password, user.password_hash)
+    if (!valid) {
+      return c.redirect(`/login?error=${encodeURIComponent('Invalid email or password')}&redirect=${encodeURIComponent(redirect)}`)
+    }
+  } else {
+    const passwordHash = await Bun.password.hash(password)
+    users.create(email, passwordHash)
+    user = users.findByEmail(email)
+    if (!user) {
+      return c.redirect(`/login?error=${encodeURIComponent('Registration failed')}&redirect=${encodeURIComponent(redirect)}`)
+    }
   }
 
-  const valid = await Bun.password.verify(password, user.password_hash)
-  if (!valid) {
-    return c.redirect(`/login?error=${encodeURIComponent('邮箱或密码错误')}&redirect=${encodeURIComponent(redirect)}`)
-  }
-
-  const token = await createToken({ id: user.id, email: user.email })
+  const token = await createToken({ id: user.id, email: user.email, nickname: user.nickname || '', avatar: user.avatar || '' })
   setAuthCookie(c, token)
   return c.redirect(redirect)
 })
 
-app.get('/register', async (c) => {
-  const lang = getLang(c)
-  const user = await getAuthUser(c)
-  if (user) return c.redirect('/')
-  const error = c.req.query('error') || undefined
-  return c.html(
-    <Layout lang={lang}>
-      <LoginPage lang={lang} error={error} mode="register" />
-    </Layout>
-  )
-})
+// Remove old register route - redirect to unified login
+app.get('/register', (c) => c.redirect('/login'))
 
-app.post('/register', async (c) => {
-  const body = await c.req.parseBody()
-  const email = String(body.email || '').toLowerCase().trim()
-  const password = String(body.password || '')
-
-  if (!email || !password) {
-    return c.redirect('/register?error=' + encodeURIComponent('请填写邮箱和密码'))
-  }
-  if (password.length < 6) {
-    return c.redirect('/register?error=' + encodeURIComponent('密码至少6位'))
-  }
-
-  const existing = users.findByEmail(email)
-  if (existing) {
-    return c.redirect('/register?error=' + encodeURIComponent('该邮箱已注册'))
-  }
-
-  const passwordHash = await Bun.password.hash(password)
-  users.create(email, passwordHash)
-
-  const newUser = users.findByEmail(email)
-  if (newUser) {
-    const token = await createToken({ id: newUser.id, email: newUser.email })
-    setAuthCookie(c, token)
-  }
-
-  return c.redirect('/')
-})
-
+// Logout
 app.get('/logout', (c) => {
   removeAuthCookie(c)
   return c.redirect('/')
 })
 
-app.get('/favorites', async (c) => {
+// Profile page
+app.get('/profile', async (c) => {
   const lang = getLang(c)
   const user = await getAuthUser(c)
-  if (!user) return c.redirect('/login?redirect=' + encodeURIComponent('/favorites'))
+  if (!user) return c.redirect('/login?redirect=' + encodeURIComponent('/profile'))
 
   const favs = favorites.listByUser(user.id)
   return c.html(
-    <Layout user={user} lang={lang} currentUrl="/favorites">
-      <FavoritesPage lang={lang} favorites={favs} />
+    <Layout user={user} lang={lang}>
+      <ProfilePage lang={lang} user={user} favorites={favs} />
     </Layout>
   )
 })
 
+// News
 app.get('/news', async (c) => {
   const lang = getLang(c)
   const user = await getAuthUser(c)
@@ -223,7 +191,7 @@ app.get('/news', async (c) => {
   const data = news.list(page, 10)
 
   return c.html(
-    <Layout user={user} lang={lang} title="行业动态" currentUrl="/news">
+    <Layout user={user} lang={lang} title="News">
       <NewsListPage lang={lang} newsItems={data.items} page={data.page} total={data.total} limit={data.limit} />
     </Layout>
   )
@@ -235,12 +203,10 @@ app.get('/news/:slug', async (c) => {
   const slug = c.req.param('slug')
   const article = news.findBySlug(slug)
 
-  if (!article) {
-    return c.notFound()
-  }
+  if (!article) return c.notFound()
 
   return c.html(
-    <Layout user={user} lang={lang} title={article.title} currentUrl={`/news/${slug}`}>
+    <Layout user={user} lang={lang} title={article.title}>
       <NewsDetailPage lang={lang} news={article} />
     </Layout>
   )

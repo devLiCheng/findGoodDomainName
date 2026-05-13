@@ -2,7 +2,6 @@ import { Database } from 'bun:sqlite'
 
 const DB_PATH = process.env.DB_PATH || './data/app.db'
 
-// Ensure data directory exists
 import { mkdir } from 'node:fs/promises'
 try { await mkdir('./data', { recursive: true }) } catch {}
 
@@ -15,9 +14,15 @@ db.run(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
+    nickname TEXT DEFAULT '',
+    avatar TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now'))
   )
 `)
+
+// Add columns if they don't exist (migration for existing DBs)
+try { db.run('ALTER TABLE users ADD COLUMN nickname TEXT DEFAULT \'\'') } catch {}
+try { db.run('ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT \'\'') } catch {}
 
 db.run(`
   CREATE TABLE IF NOT EXISTS favorites (
@@ -44,7 +49,6 @@ db.run(`
   )
 `)
 
-// User operations
 export const users = {
   create(email: string, passwordHash: string) {
     const stmt = db.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)')
@@ -52,22 +56,28 @@ export const users = {
   },
   findByEmail(email: string) {
     return db.query('SELECT * FROM users WHERE email = ?').get(email) as {
-      id: number; email: string; password_hash: string; created_at: string
+      id: number; email: string; password_hash: string; nickname: string; avatar: string; created_at: string
     } | null
   },
   findById(id: number) {
-    return db.query('SELECT id, email, created_at FROM users WHERE id = ?').get(id) as {
-      id: number; email: string; created_at: string
+    return db.query('SELECT id, email, nickname, avatar, created_at FROM users WHERE id = ?').get(id) as {
+      id: number; email: string; nickname: string; avatar: string; created_at: string
     } | null
+  },
+  updateProfile(id: number, data: { nickname?: string; avatar?: string }) {
+    if (data.nickname !== undefined) {
+      db.run('UPDATE users SET nickname = ? WHERE id = ?', [data.nickname, id])
+    }
+    if (data.avatar !== undefined) {
+      db.run('UPDATE users SET avatar = ? WHERE id = ?', [data.avatar, id])
+    }
+    return users.findById(id)
   },
 }
 
-// Favorites operations
 export const favorites = {
   add(userId: number, domain: string, reason: string, tld: string) {
-    const stmt = db.prepare(
-      'INSERT OR IGNORE INTO favorites (user_id, domain, reason, tld) VALUES (?, ?, ?, ?)'
-    )
+    const stmt = db.prepare('INSERT OR IGNORE INTO favorites (user_id, domain, reason, tld) VALUES (?, ?, ?, ?)')
     return stmt.run(userId, domain, reason, tld)
   },
   remove(userId: number, domain: string) {
@@ -79,6 +89,10 @@ export const favorites = {
       id: number; user_id: number; domain: string; reason: string; tld: string; created_at: string
     }>
   },
+  countByUser(userId: number): number {
+    const row = db.query('SELECT COUNT(*) as c FROM favorites WHERE user_id = ?').get(userId) as { c: number }
+    return row.c
+  },
   isFavorited(userId: number, domain: string): boolean {
     const row = db.query('SELECT 1 FROM favorites WHERE user_id = ? AND domain = ?').get(userId, domain)
     return !!row
@@ -89,18 +103,13 @@ export const favorites = {
   },
 }
 
-// News operations
 export const news = {
   create(title: string, slug: string, content: string, summary: string) {
-    const stmt = db.prepare(
-      'INSERT INTO news (title, slug, content, summary) VALUES (?, ?, ?, ?)'
-    )
+    const stmt = db.prepare('INSERT INTO news (title, slug, content, summary) VALUES (?, ?, ?, ?)')
     return stmt.run(title, slug, content, summary)
   },
   update(id: number, title: string, content: string, summary: string) {
-    const stmt = db.prepare(
-      `UPDATE news SET title = ?, content = ?, summary = ?, updated_at = datetime('now') WHERE id = ?`
-    )
+    const stmt = db.prepare(`UPDATE news SET title = ?, content = ?, summary = ?, updated_at = datetime('now') WHERE id = ?`)
     return stmt.run(title, content, summary, id)
   },
   delete(id: number) {
@@ -108,9 +117,7 @@ export const news = {
   },
   list(page: number = 1, limit: number = 10) {
     const offset = (page - 1) * limit
-    const items = db.query(
-      'SELECT id, title, slug, summary, created_at FROM news ORDER BY created_at DESC LIMIT ? OFFSET ?'
-    ).all(limit, offset) as Array<{
+    const items = db.query('SELECT id, title, slug, summary, created_at FROM news ORDER BY created_at DESC LIMIT ? OFFSET ?').all(limit, offset) as Array<{
       id: number; title: string; slug: string; summary: string; created_at: string
     }>
     const total = db.query('SELECT COUNT(*) as count FROM news').get() as { count: number }

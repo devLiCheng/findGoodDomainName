@@ -10,6 +10,28 @@ const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 // 7 days
 export interface AuthUser {
   id: number
   email: string
+  nickname: string
+  avatar: string
+}
+
+export async function getAuthUser(c: Context): Promise<AuthUser | null> {
+  const token = getCookie(c, COOKIE_NAME)
+  if (!token) return null
+  try {
+    const payload = await verify(token, JWT_SECRET) as { id: number; email: string; exp: number }
+    if (payload.id && payload.email) {
+      const profile = users.findById(payload.id)
+      return {
+        id: payload.id,
+        email: payload.email,
+        nickname: profile?.nickname || '',
+        avatar: profile?.avatar || '',
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
 }
 
 export async function createToken(user: AuthUser): Promise<string> {

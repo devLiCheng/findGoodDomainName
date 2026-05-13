@@ -4,63 +4,51 @@ import { createToken, setAuthCookie, removeAuthCookie, getAuthUser } from '../mi
 
 const authRoutes = new Hono()
 
-authRoutes.post('/register', async (c) => {
-  try {
-    const { email, password } = await c.req.json<{ email: string; password: string }>()
-    if (!email || !password) {
-      return c.json({ error: 'Email and password are required' }, 400)
-    }
-    if (password.length < 6) {
-      return c.json({ error: '密码至少6位' }, 400)
-    }
-
-    const existing = users.findByEmail(email.toLowerCase().trim())
-    if (existing) {
-      return c.json({ error: '该邮箱已注册' }, 409)
-    }
-
-    const passwordHash = await Bun.password.hash(password)
-    users.create(email.toLowerCase().trim(), passwordHash)
-
-    const newUser = users.findByEmail(email.toLowerCase().trim())
-    if (!newUser) {
-      return c.json({ error: '注册失败' }, 500)
-    }
-
-    const token = await createToken({ id: newUser.id, email: newUser.email })
-    setAuthCookie(c, token)
-
-    return c.json({ ok: true, user: { id: newUser.id, email: newUser.email } })
-  } catch (err) {
-    console.error('Register error:', err)
-    return c.json({ error: '注册失败' }, 500)
-  }
-})
-
+// Unified login-or-register: if email exists → verify password & login; if not → register
 authRoutes.post('/login', async (c) => {
   try {
     const { email, password } = await c.req.json<{ email: string; password: string }>()
     if (!email || !password) {
       return c.json({ error: 'Email and password are required' }, 400)
     }
-
-    const user = users.findByEmail(email.toLowerCase().trim())
-    if (!user) {
-      return c.json({ error: '邮箱或密码错误' }, 401)
+    if (password.length < 6) {
+      return c.json({ error: 'Password must be at least 6 characters' }, 400)
     }
 
-    const valid = await Bun.password.verify(password, user.password_hash)
-    if (!valid) {
-      return c.json({ error: '邮箱或密码错误' }, 401)
+    const normalizedEmail = email.toLowerCase().trim()
+    let user = users.findByEmail(normalizedEmail)
+
+    if (user) {
+      // Existing user → login
+      const valid = await Bun.password.verify(password, user.password_hash)
+      if (!valid) {
+        return c.json({ error: 'Invalid email or password' }, 401)
+      }
+    } else {
+      // New user → register
+      const passwordHash = await Bun.password.hash(password)
+      users.create(normalizedEmail, passwordHash)
+      user = users.findByEmail(normalizedEmail)
+      if (!user) {
+        return c.json({ error: 'Registration failed' }, 500)
+      }
     }
 
     const token = await createToken({ id: user.id, email: user.email })
     setAuthCookie(c, token)
 
-    return c.json({ ok: true, user: { id: user.id, email: user.email } })
+    return c.json({
+      ok: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        nickname: user.nickname || '',
+        avatar: user.avatar || '',
+      },
+    })
   } catch (err) {
-    console.error('Login error:', err)
-    return c.json({ error: '登录失败' }, 500)
+    console.error('Auth error:', err)
+    return c.json({ error: 'Authentication failed' }, 500)
   }
 })
 
@@ -72,7 +60,27 @@ authRoutes.post('/logout', async (c) => {
 authRoutes.get('/me', async (c) => {
   const user = await getAuthUser(c)
   if (!user) return c.json({ user: null })
-  return c.json({ user: { id: user.id, email: user.email } })
+  const profile = users.findById(user.id)
+  return c.json({
+    user: {
+      id: user.id,
+      email: user.email,
+      nickname: profile?.nickname || '',
+      avatar: profile?.avatar || '',
+    },
+  })
+})
+
+authRoutes.post('/profile', async (c) => {
+  const authUser = await getAuthUser(c)
+  if (!authUser) return c.json({ error: 'Not logged in' }, 401)
+  try {
+    const { nickname, avatar } = await c.req.json<{ nickname?: string; avatar?: string }>()
+    const updated = users.updateProfile(authUser.id, { nickname, avatar })
+    return c.json({ ok: true, user: updated })
+  } catch {
+    return c.json({ error: 'Update failed' }, 500)
+  }
 })
 
 export default authRoutes
