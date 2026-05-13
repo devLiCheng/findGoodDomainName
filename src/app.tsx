@@ -67,23 +67,31 @@ function RC(item,type){
   var d=item.domain.toLowerCase();
   var isFav=F.has(d);
   var favHtml='';
-  if(type==='available'&&U){
-    favHtml='<button class="dc-fav'+(isFav?' active':'')+'" onclick="TF(this,\\''+E(item.domain)+'\\',\\''+E(item.reason||'')+'\\',\\''+E(item.tld||'')+'\\')">'+(isFav?'\\\\u2605 '+T('favorited'):'\\\\u2606 '+T('favorite'))+'</button>'
+  if(type==='available'&&U&&U!=='null'){
+    favHtml='<button class="dc-fav'+(isFav?' active':'')+'" data-domain="'+E(item.domain)+'" data-reason="'+E(item.reason||'')+'" data-tld="'+E(item.tld||'')+'">'+(isFav?'\u2605 '+T('favorited'):'\u2606 '+T('favorite'))+'</button>'
   }
   return '<div class="domain-card"><div class="dc-top"><div><span class="dc-domain">'+E(item.domain)+'</span><span class="dc-tld">'+E(item.tld||'')+'</span></div><div class="dc-right">'+favHtml+'<span class="dc-badge '+(type==='available'?'green':'red')+'">'+(type==='available'?T('availableBadge'):T('registeredBadge'))+'</span></div></div><p class="dc-reason">'+E(item.reason||'')+'</p></div>'
 }
-async function TF(btn,domain,reason,tld){
+function TF(btn){
   var isActive=btn.classList.contains('active');
+  var domain=btn.getAttribute('data-domain')||'';
+  var reason=btn.getAttribute('data-reason')||'';
+  var tld=btn.getAttribute('data-tld')||'';
   var url=isActive?'/api/favorites/remove':'/api/favorites/add';
   try{
     var res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain:domain,reason:reason,tld:tld})});
     if(res.ok){
-      if(isActive){btn.classList.remove('active');btn.textContent='\\\\u2606 '+T('favorite');F.delete(domain.toLowerCase())}
-      else{btn.classList.add('active');btn.textContent='\\\\u2605 '+T('favorited');F.add(domain.toLowerCase())}
+      if(isActive){btn.classList.remove('active');btn.textContent='\u2606 '+T('favorite');F.delete(domain.toLowerCase())}
+      else{btn.classList.add('active');btn.textContent='\u2605 '+T('favorited');F.add(domain.toLowerCase())}
     }else if(res.status===401){window.location.href='/login'}
   }catch(e){}
 }
-window.HS=HS;window.TF=TF;
+// Event delegation for fav buttons
+document.addEventListener('click',function(e){
+  var btn=e.target.closest('.dc-fav');
+  if(btn)TF(btn);
+});
+window.HS=HS;
 })();`, 200, { 'Content-Type': 'application/javascript; charset=utf-8' })
 })
 

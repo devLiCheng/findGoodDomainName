@@ -147,7 +147,9 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .avatar-container{position:relative;cursor:pointer;display:inline-block;flex-shrink:0}
 .avatar-overlay{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:600;opacity:0;transition:opacity .12s}
 .avatar-container:hover .avatar-overlay{opacity:1}
-.profile-info h2{font-size:1.25rem;font-weight:600;margin-bottom:2px}
+.profile-info h2{font-size:1.25rem;font-weight:600;margin-bottom:2px;display:flex;align-items:center;gap:8px}
+.edit-icon{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:2px;border-radius:4px;display:inline-flex;align-items:center;transition:color .12s}
+.edit-icon:hover{color:var(--accent)}
 .profile-info p{color:var(--text-dim);font-size:.8rem}
 .profile-edit{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px}
 .profile-edit h3{font-size:.95rem;font-weight:600;margin-bottom:14px;color:var(--text)}
