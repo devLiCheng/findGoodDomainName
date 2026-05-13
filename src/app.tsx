@@ -38,24 +38,43 @@ if(input){
     b.addEventListener('click',function(){input.value=this.getAttribute('data-kw');input.focus()})
   });
 }
+// Tab switching
+document.querySelectorAll('.mode-tab').forEach(function(t){
+  t.addEventListener('click',function(){
+    document.querySelectorAll('.mode-tab').forEach(function(x){x.classList.remove('active')});
+    this.classList.add('active');
+    var mode=this.getAttribute('data-mode');
+    document.getElementById('panelDiscover').style.display=mode==='discover'?'block':'none';
+    document.getElementById('panelCheck').style.display=mode==='check'?'block':'none';
+    document.getElementById('resultArea').innerHTML='';
+    if(mode==='discover'){document.getElementById('keywordInput').focus()}
+    else{document.getElementById('domainCheckInput').focus()}
+  });
+});
+// Domain check hints
+document.querySelectorAll('#panelCheck button[data-chk]').forEach(function(b){
+  b.addEventListener('click',function(){document.getElementById('domainCheckInput').value=this.getAttribute('data-chk');checkDomain()})
+});
 // Domain checker
 var dcInput=document.getElementById('domainCheckInput');
 var dcBtn=document.getElementById('domainCheckBtn');
-if(dcInput&&dcBtn){
-  dcInput.addEventListener('keydown',function(e){if(e.key==='Enter')checkDomain()});
-  dcBtn.addEventListener('click',checkDomain);
-}
+if(dcInput)dcInput.addEventListener('keydown',function(e){if(e.key==='Enter')checkDomain()});
+if(dcBtn)dcBtn.addEventListener('click',checkDomain);
 async function checkDomain(){
   if(!U||U==='null'){window.location.href='/login?redirect='+encodeURIComponent(window.location.href);return}
   var domain=dcInput.value.trim().toLowerCase();if(!domain)return;
-  var area=document.getElementById('domainCheckResult');
-  area.style.display='block';area.className='check-result';area.textContent='...';
+  var area=document.getElementById('resultArea');
+  area.innerHTML='<div class="status-box"><div class="spinner"></div><p>'+T('loading')+'</p></div>';
   try{
     var r=await fetch('/api/check?domain='+encodeURIComponent(domain));
     var d=await r.json();
-    if(d.available){area.className='check-result avail';area.textContent='\u2705 '+domain+' '+T('availableBadge')}
-    else{area.className='check-result reg';area.textContent='\u274c '+domain+' '+T('registeredBadge')}
-  }catch(e){area.textContent=T('errorPrefix')+': '+e.message}
+    var tld=d.domain.split('.').pop();
+    if(d.available){
+      area.innerHTML='<div class="check-result-card green-card"><div class="cr-icon">&#x2705;</div><div class="cr-domain">'+E(d.domain)+'</div><div class="cr-status" style="color:var(--green)">'+T('availableBadge')+'</div><div class="cr-meta"><span class="cr-tld green">.'+tld+'</span></div></div>'
+    }else{
+      area.innerHTML='<div class="check-result-card red-card"><div class="cr-icon">&#x274C;</div><div class="cr-domain">'+E(d.domain)+'</div><div class="cr-status" style="color:var(--red)">'+T('registeredBadge')+'</div><div class="cr-meta"><span class="cr-tld red">.'+tld+'</span></div></div>'
+    }
+  }catch(e){area.innerHTML='<div class="error-box">'+T('errorPrefix')+': '+E(e.message)+'</div>'}
 }
 async function HS(){
   if(!U||U==='null'){window.location.href='/login?redirect='+encodeURIComponent(window.location.href);return}

@@ -79,6 +79,15 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .hero-sub{color:var(--text-dim);font-size:.95rem;font-weight:300;max-width:440px;margin:0 auto 32px;letter-spacing:.2px}
 
 .search-wrap{max-width:540px;margin:0 auto}
+/* Mode tabs */
+.mode-tabs{display:flex;justify-content:center;gap:4px;margin-bottom:24px}
+.mode-tab{display:flex;align-items:center;gap:6px;padding:8px 20px;border-radius:10px;background:transparent;border:1px solid var(--border);color:var(--text-dim);font-family:var(--font-body);font-size:.78rem;cursor:pointer;transition:all .15s}
+.mode-tab:hover{border-color:var(--accent);color:var(--accent)}
+.mode-tab.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+.mode-tab svg{flex-shrink:0;opacity:.7}
+.mode-tab.active svg{opacity:1}
+.mode-panel{transition:opacity .15s}
+.mode-panel.active{display:block!important}
 .search-bar{display:flex;gap:0;border-radius:13px;overflow:hidden;background:var(--bg-input);border:1px solid var(--border);transition:all .2s}
 .search-bar:focus-within{border-color:var(--accent);box-shadow:0 0 24px var(--accent-dim)}
 .search-bar input{flex:1;padding:16px 20px;background:transparent;border:none;color:var(--text);font-size:.92rem;font-family:var(--font-body);outline:none}
@@ -171,16 +180,17 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .site-footer a:hover{color:var(--accent)}
 .site-footer .sep{opacity:.3}
 
-.domain-check-section{max-width:540px;margin:0 auto 60px;padding-top:12px}
-.domain-check-bar{display:flex;gap:0;border-radius:10px;overflow:hidden;background:var(--bg-input);border:1px solid var(--border);transition:all .2s}
-.domain-check-bar:focus-within{border-color:var(--accent);box-shadow:0 0 16px var(--accent-dim)}
-.domain-check-bar input{flex:1;padding:12px 16px;background:transparent;border:none;color:var(--text);font-size:.82rem;font-family:var(--font-body);outline:none}
-.domain-check-bar input::placeholder{color:var(--text-muted)}
-.domain-check-bar button{padding:12px 22px;background:transparent;border:none;color:var(--text-dim);font-family:var(--font-body);font-size:.78rem;font-weight:500;cursor:pointer;transition:all .12s;border-left:1px solid var(--border)}
-.domain-check-bar button:hover{color:var(--accent);background:var(--accent-dim)}
-.check-result{margin-top:8px;text-align:center;font-size:.8rem;padding:8px;border-radius:8px}
-.check-result.avail{color:var(--green);background:var(--green-dim)}
-.check-result.reg{color:var(--red);background:var(--red-dim)}
+/* Domain check result card */
+.check-result-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;text-align:center;max-width:400px;margin:0 auto}
+.check-result-card .cr-icon{font-size:2.5rem;margin-bottom:8px}
+.check-result-card .cr-domain{font-family:var(--font-mono);font-size:1.3rem;font-weight:600;color:var(--text);margin-bottom:6px;word-break:break-all}
+.check-result-card .cr-status{font-size:.9rem;font-weight:600;margin-bottom:12px}
+.check-result-card .cr-meta{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.check-result-card .cr-tld{display:inline-block;padding:3px 10px;border-radius:5px;font-size:.7rem;font-weight:600;font-family:var(--font-body)}
+.check-result-card .cr-tld.green{background:var(--green-dim);color:var(--green);border:1px solid rgba(110,231,168,.2)}
+.check-result-card .cr-tld.red{background:var(--red-dim);color:var(--red);border:1px solid rgba(252,165,165,.15)}
+.check-result-card.green-card{border-color:rgba(110,231,168,.2)}.check-result-card.green-card .cr-icon{color:var(--green)}
+.check-result-card.red-card{border-color:rgba(252,165,165,.15)}.check-result-card.red-card .cr-icon{color:var(--red)}
 
 @media(max-width:600px){.hero{padding:50px 0 20px}.hero-title{font-size:1.8rem}.search-bar{flex-direction:column}.search-bar button{border-radius:0 0 13px 13px}.topbar{padding:10px 16px;flex-wrap:wrap;gap:6px}.dc-top{flex-wrap:wrap;gap:6px}.profile-header{flex-direction:column;text-align:center}}
 `
