@@ -1,3 +1,4 @@
+import { raw } from 'hono/html'
 import { t, type Lang } from './i18n'
 
 interface LoginProps {
@@ -42,7 +43,7 @@ export function LoginPage({ lang = 'zh', error, redirect = '/', googleClientId }
         <div id="loginError" class="error-box" style="display:none;margin-bottom:14px;"></div>
         <button type="submit" class="btn btn-primary" id="loginBtn">{i18n('signin')}</button>
       </form>
-      <script>{`async function handleLogin(e){e.preventDefault();var b=document.getElementById('loginBtn');var er=document.getElementById('loginError');b.disabled=true;b.textContent='...';er.style.display='none';try{var r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:document.getElementById('lemail').value,password:document.getElementById('lpass').value})});var d=await r.json();if(r.ok){window.location.href='${redirect}'}else{er.textContent=d.error||'Failed';er.style.display='block'}}catch(ex){er.textContent='Network error';er.style.display='block'}finally{b.disabled=false;b.textContent='${lang === 'zh' ? '登录' : 'Sign in'}'}return false}`}</script>
+      <script>{raw(`async function handleLogin(e){e.preventDefault();var b=document.getElementById('loginBtn');var er=document.getElementById('loginError');b.disabled=true;b.textContent='...';er.style.display='none';try{var r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:document.getElementById('lemail').value,password:document.getElementById('lpass').value})});var d=await r.json();if(r.ok){window.location.href='${redirect}'}else{er.textContent=d.error||'Failed';er.style.display='block'}}catch(ex){er.textContent='Network error';er.style.display='block'}finally{b.disabled=false;b.textContent='${lang === 'zh' ? '登录' : 'Sign in'}'}return false}`)}</script>
     </div>
   )
 }
