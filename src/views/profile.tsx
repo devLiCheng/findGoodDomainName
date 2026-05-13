@@ -56,9 +56,10 @@ export function ProfilePage({ lang = 'zh', user, favorites }: ProfileProps) {
                 <button class="dr-fav active" data-domain={fav.domain} onclick="RF(this)">★</button>
               </div>
             </div>
-        <input type="file" id="avatarFile" accept="image/*" style="display:none" onchange="handleAvatar(event)" />
-
-        <h3 class="page-title" style="font-size:1.2rem;">{i18n('myFavorites')}</h3>
+          ))
+        )}
+      </div>
+      <script>{raw(`window.__I18N__ = ${safeI18n};window.__NICK__ = '${displayName}';`)}</script>
       <script>{raw(`
         var avatarDataUrl = '';
         function startEditNickname(){
@@ -79,7 +80,6 @@ export function ProfilePage({ lang = 'zh', user, favorites }: ProfileProps) {
               document.getElementById('displayName').textContent=name;
               document.getElementById('nicknameEdit').style.display='none';
               document.getElementById('displayName').style.display='inline';
-              // Update avatar initial if needed
               var al=document.getElementById('avatarLarge');
               if(al&&al.tagName==='SPAN')al.textContent=(name[0]||'').toUpperCase();
             }
@@ -95,7 +95,6 @@ export function ProfilePage({ lang = 'zh', user, favorites }: ProfileProps) {
             var img=document.createElement('img');img.className='avatar-lg-img';img.src=compressed;img.id='avatarLarge';
             preview.parentNode.replaceChild(img,preview);
           }else if(preview){preview.src=compressed}
-          // Upload immediately
           var blob=dataURLtoBlob(compressed);var form=new FormData();form.append('avatar',blob,'avatar.jpg');
           await fetch('/api/auth/avatar',{method:'POST',body:form});
         }
