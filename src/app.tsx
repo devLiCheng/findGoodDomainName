@@ -53,14 +53,14 @@ document.querySelectorAll('#panelCheck .tag').forEach(function(b){
   b.addEventListener('click',function(){dcInput.value=this.getAttribute('data-chk');checkDomain()})
 });
 
-// Tab switching - don't clear results, only toggle panels
+// Tab switching - CSS handles display, just toggle active class
 document.querySelectorAll('.tab').forEach(function(t){
   t.addEventListener('click',function(){
     document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});
     this.classList.add('active');
     var mode=this.getAttribute('data-mode');
-    document.getElementById('panelDiscover').style.display=mode==='discover'?'block':'none';
-    document.getElementById('panelCheck').style.display=mode==='check'?'block':'none';
+    document.getElementById('panelDiscover').classList.toggle('active',mode==='discover');
+    document.getElementById('panelCheck').classList.toggle('active',mode==='check');
     if(mode==='discover')input.focus();else dcInput.focus()
   });
 });

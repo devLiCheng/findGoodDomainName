@@ -104,7 +104,7 @@ html{font-size:16px}body{font-family:var(--font);background:var(--bg);color:var(
 .tab:hover{color:var(--text)}
 .tab.active{background:var(--bg3);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .tab.active svg{opacity:1;color:var(--accent)}
-.panel{transition:opacity .2s}
+.panel{display:none}
 .panel.active{display:block!important}
 
 /* Search */

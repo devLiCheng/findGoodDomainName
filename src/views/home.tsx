@@ -62,7 +62,7 @@ export function HomePage({ lang = 'zh', user, favoritedDomains = [] }: HomeProps
         </div>
 
         {/* Check panel */}
-        <div class="panel" id="panelCheck" style="display:none">
+        <div class="panel" id="panelCheck">
           <div class="search-group">
             <input
               id="domainCheckInput"
