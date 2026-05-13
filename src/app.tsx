@@ -39,9 +39,9 @@ if(input){
   });
 }
 // Tab switching
-document.querySelectorAll('.mode-tab').forEach(function(t){
+document.querySelectorAll('.tab').forEach(function(t){
   t.addEventListener('click',function(){
-    document.querySelectorAll('.mode-tab').forEach(function(x){x.classList.remove('active')});
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});
     this.classList.add('active');
     var mode=this.getAttribute('data-mode');
     document.getElementById('panelDiscover').style.display=mode==='discover'?'block':'none';

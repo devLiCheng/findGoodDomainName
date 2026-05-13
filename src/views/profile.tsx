@@ -33,7 +33,7 @@ export function ProfilePage({ lang = 'zh', user, favorites }: ProfileProps) {
               </button>
             </h2>
             <div id="nicknameEdit" style="display:none;margin-top:8px;">
-              <input id="nicknameInput" type="text" value={user.nickname} placeholder={user.email.split('@')[0]!} maxlength={30} style="padding:6px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.85rem;font-family:var(--font-body);outline:none;width:180px;" />
+              <input id="nicknameInput" type="text" value={user.nickname} placeholder={user.email.split('@')[0]!} maxlength={30} style="padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.85rem;font-family:var(--font);outline:none;width:180px;" />
               <button class="btn btn-primary" style="width:auto;padding:6px 14px;font-size:.78rem;margin-left:6px;" onclick="saveNickname()">{i18n('save')}</button>
               <button class="btn-ghost" style="padding:6px 12px;font-size:.76rem;" onclick="cancelEditNickname()">{i18n('cancel')}</button>
             </div>
@@ -45,23 +45,20 @@ export function ProfilePage({ lang = 'zh', user, favorites }: ProfileProps) {
 
         <h3 class="page-title" style="font-size:1.2rem;">{i18n('myFavorites')}</h3>
         {favorites.length === 0 ? (
-          <div class="status-box" style="padding:40px 20px;"><p>{i18n('noFavorites')}</p></div>
+          <div class="empty-msg"><p>{i18n('noFavorites')}</p></div>
         ) : (
           favorites.map(fav => (
-            <div class="domain-card">
-              <div class="dc-top">
-                <div>
-                  <span class="dc-domain">{fav.domain}</span>
-                  <span class="dc-tld">{fav.tld}</span>
-                </div>
-                <button class="dc-fav active" data-domain={fav.domain} onclick="RF(this)">★ {i18n('favorited')}</button>
+            <div class="domain-row">
+              <span class="dr-domain">{fav.domain}</span>
+              <span class="dr-tld">{fav.tld}</span>
+              <span class="dr-reason">{fav.reason}</span>
+              <div class="dr-right">
+                <button class="dr-fav active" data-domain={fav.domain} onclick="RF(this)">★</button>
               </div>
-              <p class="dc-reason">{fav.reason}</p>
             </div>
-          ))
-        )}
-      </div>
-      <script>{raw(`window.__I18N__ = ${safeI18n};window.__NICK__ = '${displayName}';`)}</script>
+        <input type="file" id="avatarFile" accept="image/*" style="display:none" onchange="handleAvatar(event)" />
+
+        <h3 class="page-title" style="font-size:1.2rem;">{i18n('myFavorites')}</h3>
       <script>{raw(`
         var avatarDataUrl = '';
         function startEditNickname(){
