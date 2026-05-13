@@ -119,9 +119,10 @@ app.get('/login', async (c) => {
   if (user) return c.redirect('/')
   const error = c.req.query('error') || undefined
   const redirect = c.req.query('redirect') || '/'
+  const googleClientId = process.env.GOOGLE_CLIENT_ID
   return c.html(
     <Layout lang={lang}>
-      <LoginPage lang={lang} error={error} redirect={redirect} />
+      <LoginPage lang={lang} error={error} redirect={redirect} googleClientId={googleClientId} />
     </Layout>
   )
 })
@@ -184,13 +185,14 @@ app.get('/profile', async (c) => {
   )
 })
 
-// News
+// News - SSR with 5-minute HTTP cache for high concurrency
 app.get('/news', async (c) => {
   const lang = getLang(c)
   const user = await getAuthUser(c)
   const page = parseInt(c.req.query('page') || '1')
   const data = news.list(page, 10)
 
+  c.header('Cache-Control', 'public, max-age=300, s-maxage=600')
   return c.html(
     <Layout user={user} lang={lang} title="News">
       <NewsListPage lang={lang} newsItems={data.items} page={data.page} total={data.total} limit={data.limit} />
@@ -203,9 +205,9 @@ app.get('/news/:slug', async (c) => {
   const user = await getAuthUser(c)
   const slug = c.req.param('slug')
   const article = news.findBySlug(slug)
-
   if (!article) return c.notFound()
 
+  c.header('Cache-Control', 'public, max-age=300, s-maxage=600')
   return c.html(
     <Layout user={user} lang={lang} title={article.title}>
       <NewsDetailPage lang={lang} news={article} />

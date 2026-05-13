@@ -4,6 +4,74 @@ import { createToken, setAuthCookie, removeAuthCookie, getAuthUser } from '../mi
 
 const authRoutes = new Hono()
 
+// Google OAuth redirect
+authRoutes.get('/google', (c) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID
+  if (!clientId) return c.json({ error: 'Google OAuth not configured' }, 400)
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${process.env.PORT || 3000}/api/auth/google/callback`
+  const scope = 'openid email profile'
+  const state = c.req.query('redirect') || '/'
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}`
+  return c.redirect(url)
+})
+
+// Google OAuth callback
+authRoutes.get('/google/callback', async (c) => {
+  const code = c.req.query('code')
+  const state = c.req.query('state') || '/'
+  if (!code) return c.json({ error: 'Missing code' }, 400)
+
+  const clientId = process.env.GOOGLE_CLIENT_ID
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${process.env.PORT || 3000}/api/auth/google/callback`
+
+  if (!clientId || !clientSecret) return c.redirect(`/login?error=${encodeURIComponent('Google OAuth not configured')}`)
+
+  try {
+    // Exchange code for token
+    const tokenResp = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ code, client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri, grant_type: 'authorization_code' }),
+    })
+    const tokenData = await tokenResp.json() as any
+    if (tokenData.error) {
+      return c.redirect(`/login?error=${encodeURIComponent('Google auth failed: ' + tokenData.error_description)}`)
+    }
+
+    // Get user info
+    const userResp = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    })
+    const googleUser = await userResp.json() as any
+    const email = googleUser.email?.toLowerCase()?.trim()
+    if (!email) return c.redirect(`/login?error=${encodeURIComponent('Failed to get Google account info')}`)
+
+    // Auto-login or register
+    let user = users.findByEmail(email)
+    if (!user) {
+      const passwordHash = await Bun.password.hash('google-' + crypto.randomUUID())
+      users.create(email, passwordHash)
+      user = users.findByEmail(email)
+      if (!user) return c.redirect(`/login?error=${encodeURIComponent('Registration failed')}`)
+      // Set nickname from Google profile
+      if (googleUser.name) {
+        users.updateProfile(user.id, { nickname: googleUser.name })
+      }
+      if (googleUser.picture) {
+        users.updateProfile(user.id, { avatar: googleUser.picture })
+      }
+    }
+
+    const token = await createToken({ id: user.id, email: user.email, nickname: user.nickname || '', avatar: user.avatar || '' })
+    setAuthCookie(c, token)
+    return c.redirect(state)
+  } catch (err) {
+    console.error('Google OAuth error:', err)
+    return c.redirect(`/login?error=${encodeURIComponent('Google auth error')}`)
+  }
+})
+
 // Unified login-or-register: if email exists → verify password & login; if not → register
 authRoutes.post('/login', async (c) => {
   try {
