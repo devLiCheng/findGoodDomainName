@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { generateDomainSuggestions } from '../services/deepseek'
-import { checkDomain, clearRequestCache } from '../services/domain-checker'
+import { checkDomain } from '../services/domain-checker'
 import type { SuggestRequest, SuggestResponse, DomainSuggestion } from '../types'
 
 const domainRoutes = new Hono()
@@ -23,8 +23,6 @@ domainRoutes.post('/suggest', async (c) => {
     }
 
     const count = body.count && body.count > 0 && body.count <= 20 ? body.count : 12
-
-    clearRequestCache()
 
     const deepseekItems = await generateDomainSuggestions(keywords, count)
 
