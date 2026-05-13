@@ -148,6 +148,10 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .profile-wrap{max-width:500px;margin:40px auto}
 .profile-header{display:flex;align-items:center;gap:20px;margin-bottom:32px}
 .avatar-lg{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-3));color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;font-family:var(--font-body);flex-shrink:0}
+.avatar-lg-img{width:64px;height:64px;border-radius:50%;object-fit:cover}
+.avatar-container{position:relative;cursor:pointer;display:inline-block;flex-shrink:0}
+.avatar-overlay{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:600;opacity:0;transition:opacity .15s}
+.avatar-container:hover .avatar-overlay{opacity:1}
 .profile-info h2{font-size:1.3rem;font-weight:600;margin-bottom:2px}
 .profile-info p{color:var(--text-dim);font-size:.82rem}
 .profile-edit{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px}

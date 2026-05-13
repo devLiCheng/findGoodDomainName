@@ -83,4 +83,33 @@ authRoutes.post('/profile', async (c) => {
   }
 })
 
+// Avatar upload with server-side compression (max 2MB)
+authRoutes.post('/avatar', async (c) => {
+  const authUser = await getAuthUser(c)
+  if (!authUser) return c.json({ error: 'Not logged in' }, 401)
+
+  try {
+    const body = await c.req.parseBody()
+    const file = body.avatar as File | undefined
+    if (!file) return c.json({ error: 'No file uploaded' }, 400)
+
+    const MAX_SIZE = 2 * 1024 * 1024
+    let buffer = Buffer.from(await file.arrayBuffer())
+
+    if (buffer.length > MAX_SIZE) {
+      return c.json({ error: 'Image must be less than 2MB' }, 400)
+    }
+
+    // Convert to base64 data URL
+    const contentType = file.type || 'image/png'
+    const base64 = buffer.toString('base64')
+    const dataUrl = `data:${contentType};base64,${base64}`
+
+    const updated = users.updateProfile(authUser.id, { avatar: dataUrl })
+    return c.json({ ok: true, user: updated })
+  } catch {
+    return c.json({ error: 'Upload failed' }, 500)
+  }
+})
+
 export default authRoutes

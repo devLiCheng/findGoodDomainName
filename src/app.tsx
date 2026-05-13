@@ -39,6 +39,7 @@ if(input){
   });
 }
 async function HS(){
+  if(!U||U==='null'){window.location.href='/login?redirect='+encodeURIComponent(window.location.href);return}
   var raw=input.value.trim();if(!raw)return;
   var kw=raw.split(/[,,\\\\s]+/).map(function(k){return k.trim()}).filter(Boolean);
   if(kw.length===0)return;
