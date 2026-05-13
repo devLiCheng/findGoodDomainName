@@ -64,17 +64,17 @@ async function checkDomain(){
   if(!U||U==='null'){window.location.href='/login?redirect='+encodeURIComponent(window.location.href);return}
   var domain=dcInput.value.trim().toLowerCase();if(!domain)return;
   var area=document.getElementById('resultArea');
-  area.innerHTML='<div class="status-box"><div class="spinner"></div><p>'+T('loading')+'</p></div>';
+  area.innerHTML='<div class="spinner-wrap"><div class="spinner"></div><p>'+T('loading')+'</p></div>';
   try{
     var r=await fetch('/api/check?domain='+encodeURIComponent(domain));
     var d=await r.json();
     var tld=d.domain.split('.').pop();
     if(d.available){
-      area.innerHTML='<div class="check-result-card green-card"><div class="cr-icon">&#x2705;</div><div class="cr-domain">'+E(d.domain)+'</div><div class="cr-status" style="color:var(--green)">'+T('availableBadge')+'</div><div class="cr-meta"><span class="cr-tld green">.'+tld+'</span></div></div>'
+      area.innerHTML='<div class="check-card green"><div class="cc-icon">&#10003;</div><div class="cc-domain">'+E(d.domain)+'</div><div class="cc-status" style="color:var(--green)">'+T('availableBadge')+'</div><div class="cc-meta"><span>.'+tld+'</span></div></div>'
     }else{
-      area.innerHTML='<div class="check-result-card red-card"><div class="cr-icon">&#x274C;</div><div class="cr-domain">'+E(d.domain)+'</div><div class="cr-status" style="color:var(--red)">'+T('registeredBadge')+'</div><div class="cr-meta"><span class="cr-tld red">.'+tld+'</span></div></div>'
+      area.innerHTML='<div class="check-card red"><div class="cc-icon">&#10007;</div><div class="cc-domain">'+E(d.domain)+'</div><div class="cc-status" style="color:var(--red)">'+T('registeredBadge')+'</div><div class="cc-meta"><span>.'+tld+'</span></div></div>'
     }
-  }catch(e){area.innerHTML='<div class="error-box">'+T('errorPrefix')+': '+E(e.message)+'</div>'}
+  }catch(e){area.innerHTML='<div class="error-msg">'+T('errorPrefix')+': '+E(e.message)+'</div>'}
 }
 async function HS(){
   if(!U||U==='null'){window.location.href='/login?redirect='+encodeURIComponent(window.location.href);return}
@@ -83,22 +83,22 @@ async function HS(){
   if(kw.length===0)return;
   var area=document.getElementById('resultArea');
   btn.disabled=true;
-  area.innerHTML='<div class="status-box"><div class="spinner"></div><p>'+T('loading')+'</p></div>';
+  area.innerHTML='<div class="spinner-wrap"><div class="spinner"></div><p>'+T('loading')+'</p></div>';
   try{
     var res=await fetch('/api/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:kw,count:12})});
     if(!res.ok){var ed=await res.json().catch(function(){return{}});throw new Error(ed.error||'Request failed')}
     var data=await res.json();RR(data)
   }catch(err){
-    area.innerHTML='<div class="error-box">'+T('errorPrefix')+': '+E(err.message)+'</div>'
+    area.innerHTML='<div class="error-msg">'+T('errorPrefix')+': '+E(err.message)+'</div>'
   }finally{btn.disabled=false}
 }
 function RR(data){
   var s=data.suggestions,r=data.registered,kw=data.keywords;
   var h='';
-  if(kw&&kw.length){h+='<div>';for(var i=0;i<kw.length;i++)h+='<span class="kw-tag">'+E(kw[i])+'</span>';h+='</div>'}
-  if(s&&s.length){h+='<div class="result-section"><h3 class="green">'+T('availableTitle')+'</h3>';for(var j=0;j<s.length;j++)h+=RC(s[j],'available');h+='</div>'}
-  if(r&&r.length){h+='<div class="result-section"><h3 class="red">'+T('registeredTitle')+'</h3>';for(var k=0;k<r.length;k++)h+=RC(r[k],'registered');h+='</div>'}
-  if((!s||!s.length)&&(!r||!r.length))h='<div class="status-box"><p>'+T('emptyResult')+'</p></div>';
+  if(kw&&kw.length){h+='<div class="kw-tags">';for(var i=0;i<kw.length;i++)h+='<span class="kw-tag">'+E(kw[i])+'</span>';h+='</div>'}
+  if(s&&s.length){h+='<div class="results-section"><h3 class="green">'+T('availableTitle')+'<span class="count">'+s.length+'</span></h3>';for(var j=0;j<s.length;j++)h+=RC(s[j],'available');h+='</div>'}
+  if(r&&r.length){h+='<div class="results-section"><h3 class="red">'+T('registeredTitle')+'<span class="count">'+r.length+'</span></h3>';for(var k=0;k<r.length;k++)h+=RC(r[k],'registered');h+='</div>'}
+  if((!s||!s.length)&&(!r||!r.length))h='<div class="empty-msg"><p>'+T('emptyResult')+'</p></div>';
   document.getElementById('resultArea').innerHTML=h
 }
 function RC(item,type){
@@ -106,9 +106,9 @@ function RC(item,type){
   var isFav=F.has(d);
   var favHtml='';
   if(type==='available'&&U&&U!=='null'){
-    favHtml='<button class="dc-fav'+(isFav?' active':'')+'" data-domain="'+E(item.domain)+'" data-reason="'+E(item.reason||'')+'" data-tld="'+E(item.tld||'')+'">'+(isFav?'\u2605 '+T('favorited'):'\u2606 '+T('favorite'))+'</button>'
+    favHtml='<button class="dr-fav'+(isFav?' active':'')+'" data-domain="'+E(item.domain)+'" data-reason="'+E(item.reason||'')+'" data-tld="'+E(item.tld||'')+'">'+(isFav?'\u2605':'\u2606')+'</button>'
   }
-  return '<div class="domain-card"><div class="dc-top"><div><span class="dc-domain">'+E(item.domain)+'</span><span class="dc-tld">'+E(item.tld||'')+'</span></div><div class="dc-right">'+favHtml+'<span class="dc-badge '+(type==='available'?'green':'red')+'">'+(type==='available'?T('availableBadge'):T('registeredBadge'))+'</span></div></div><p class="dc-reason">'+E(item.reason||'')+'</p></div>'
+  return '<div class="domain-row"><span class="dr-domain">'+E(item.domain)+'</span><span class="dr-tld">'+E(item.tld||'')+'</span><span class="dr-reason">'+E(item.reason||'')+'</span><div class="dr-right">'+favHtml+'<span class="dr-badge '+(type==='available'?'green':'red')+'">'+(type==='available'?T('availableBadge'):T('registeredBadge'))+'</span></div></div>'
 }
 async function TF(btn){
   var isActive=btn.classList.contains('active');
@@ -126,7 +126,7 @@ async function TF(btn){
 }
 // Event delegation for fav buttons
 document.addEventListener('click',function(e){
-  var btn=e.target.closest('.dc-fav');
+  var btn=e.target.closest('.dr-fav');
   if(btn)TF(btn);
 });
 window.HS=HS;
