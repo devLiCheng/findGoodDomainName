@@ -72,7 +72,7 @@ function RC(item,type){
   }
   return '<div class="domain-card"><div class="dc-top"><div><span class="dc-domain">'+E(item.domain)+'</span><span class="dc-tld">'+E(item.tld||'')+'</span></div><div class="dc-right">'+favHtml+'<span class="dc-badge '+(type==='available'?'green':'red')+'">'+(type==='available'?T('availableBadge'):T('registeredBadge'))+'</span></div></div><p class="dc-reason">'+E(item.reason||'')+'</p></div>'
 }
-function TF(btn){
+async function TF(btn){
   var isActive=btn.classList.contains('active');
   var domain=btn.getAttribute('data-domain')||'';
   var reason=btn.getAttribute('data-reason')||'';
