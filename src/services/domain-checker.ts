@@ -1,5 +1,6 @@
-// Domain availability check: RDAP primary + DNS SOA fallback
-// SOA records are the most reliable DNS signal — every registered domain with DNS has one
+// Ultra-conservative domain availability check
+// Only returns "available" when RDAP explicitly confirms domain not in registry
+// All other cases default to "registered" to avoid false positives
 
 const DNS_API = 'https://dns.google/resolve'
 
@@ -29,8 +30,6 @@ const RDAP_SERVERS: Record<string, string> = {
   fun: 'https://rdap.centralnic.com/fun/',
 }
 
-// Track which TLD RDAP servers are reachable
-const rdapWorking = new Set<string>()
 const rdapFailed = new Set<string>()
 
 export async function checkDomain(domain: string): Promise<boolean> {
@@ -39,62 +38,58 @@ export async function checkDomain(domain: string): Promise<boolean> {
   if (parts.length < 2) return false
   const tld = parts[parts.length - 1]!
 
-  // Tier 1: RDAP (skip if known-broken TLD)
+  // Tier 1: RDAP - the ONLY authoritative source we trust for "available"
   if (!rdapFailed.has(tld)) {
-    const rdapResult = await checkRdap(cleanDomain, tld)
-    if (rdapResult !== null) {
-      rdapWorking.add(tld)
-      return rdapResult
-    }
+    const result = await checkRdap(cleanDomain, tld)
+    if (result === true) return true  // RDAP 404 → definitely available
+    if (result === false) return false // RDAP 200 → definitely registered
+    // RDAP failed → mark TLD as unreliable
     rdapFailed.add(tld)
   }
 
-  // Tier 2: HTTP HEAD probe (fast, 1.5s)
+  // Tier 2: HTTP HEAD probe → responds = definitely registered
   try {
     await fetch(`https://${cleanDomain}`, {
-      method: 'HEAD', signal: AbortSignal.timeout(1500), redirect: 'follow'
+      method: 'HEAD', signal: AbortSignal.timeout(2000), redirect: 'follow',
     })
-    return false // HTTP responds → registered
+    return false
   } catch {}
 
-  // Tier 3: DNS SOA → NXDOMAIN = definitely available, has records = registered
-  const soa = await checkDnsRecord(cleanDomain, 'SOA')
-  if (soa !== null) return soa
+  // Tier 3: DNS SOA → has records = registered
+  try {
+    const resp = await fetch(`${DNS_API}?name=${encodeURIComponent(cleanDomain)}&type=SOA`,
+      { signal: AbortSignal.timeout(3000) }
+    )
+    if (resp.ok) {
+      const data: { Answer?: unknown[]; Status?: number } = await resp.json()
+      if (data.Answer && data.Answer.length > 0) return false
+    }
+  } catch {}
 
-  // Tier 4: DNS A
-  const a = await checkDnsRecord(cleanDomain, 'A')
-  if (a !== null) return a
+  // Tier 4: DNS A → has records = registered
+  try {
+    const resp = await fetch(`${DNS_API}?name=${encodeURIComponent(cleanDomain)}&type=A`,
+      { signal: AbortSignal.timeout(3000) }
+    )
+    if (resp.ok) {
+      const data: { Answer?: unknown[] } = await resp.json()
+      if (data.Answer && data.Answer.length > 0) return false
+    }
+  } catch {}
 
-  // No records anywhere → available
-  return true
+  // RDAP failed AND no DNS records → conservative: assume registered
+  // We only trust RDAP 404 for "available". Without it, default to conservative.
+  return false
 }
 
 async function checkRdap(domain: string, tld: string): Promise<boolean | null> {
   const server = RDAP_SERVERS[tld]
   if (!server) return null
-
   try {
     const url = server.endsWith('/') ? `${server}domain/${domain}` : `${server}/domain/${domain}`
-    const resp = await fetch(url, { signal: AbortSignal.timeout(3000) })
+    const resp = await fetch(url, { signal: AbortSignal.timeout(4000) })
     if (resp.status === 404) return true
     if (resp.status === 200) return false
-    return null
-  } catch {
-    return null
-  }
-}
-
-async function checkDnsRecord(domain: string, type: string): Promise<boolean | null> {
-  try {
-    const resp = await fetch(`${DNS_API}?name=${encodeURIComponent(domain)}&type=${type}`,
-      { signal: AbortSignal.timeout(3000) }
-    )
-    if (!resp.ok) return null
-    const data: { Answer?: unknown[]; Status?: number } = await resp.json()
-    // NXDOMAIN = domain definitely doesn't exist → available
-    if (data.Status === 3) return true
-    // Has DNS records → registered
-    if (data.Answer && data.Answer.length > 0) return false
     return null
   } catch {
     return null
