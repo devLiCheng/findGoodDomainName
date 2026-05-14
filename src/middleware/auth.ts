@@ -44,7 +44,7 @@ export async function createToken(user: AuthUser): Promise<string> {
 export function setAuthCookie(c: Context, token: string) {
   setCookie(c, COOKIE_NAME, token, {
     httpOnly: true,
-    secure: false, // Set true in production with HTTPS
+    secure: process.env.COOKIE_SECURE === 'true',
     sameSite: 'Lax',
     maxAge: COOKIE_MAX_AGE,
     path: '/',

@@ -25,10 +25,24 @@ bun install
 
 # 3. Create .env if not exists
 echo "[3/4] Configuring environment..."
+DOMAIN="${DOMAIN:-www.zhutuan.top}"
 if [ ! -f .env ]; then
   cp .env.example .env
   echo "   Created .env from .env.example"
   echo "   >>> IMPORTANT: Edit .env and set DEEPSEEK_API_KEY <<<"
+fi
+
+# Ensure production settings for HTTPS domain
+if ! grep -q "COOKIE_SECURE" .env; then
+  cat >> .env << EOF
+
+# Production HTTPS settings
+COOKIE_SECURE=true
+BASE_URL=https://${DOMAIN}
+GOOGLE_REDIRECT_URI=https://${DOMAIN}/api/auth/google/callback
+GITHUB_REDIRECT_URI=https://${DOMAIN}/api/auth/github/callback
+EOF
+  echo "   Added production HTTPS settings for $DOMAIN"
 fi
 
 # 4. Start the app
