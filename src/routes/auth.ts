@@ -85,6 +85,80 @@ authRoutes.get('/google/callback', async (c) => {
   }
 })
 
+// GitHub OAuth redirect
+authRoutes.get('/github', (c) => {
+  const clientId = process.env.GITHUB_CLIENT_ID
+  if (!clientId) return c.json({ error: 'GitHub OAuth not configured' }, 400)
+  const state = c.req.query('redirect') || '/'
+  const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(process.env.GITHUB_REDIRECT_URI || `http://localhost:${process.env.PORT || 3000}/api/auth/github/callback`)}&scope=user:email&state=${encodeURIComponent(state)}`
+  return c.redirect(url)
+})
+
+// GitHub OAuth callback
+authRoutes.get('/github/callback', async (c) => {
+  const code = c.req.query('code')
+  const state = c.req.query('state') || '/'
+  if (!code) return c.json({ error: 'Missing code' }, 400)
+
+  const clientId = process.env.GITHUB_CLIENT_ID
+  const clientSecret = process.env.GITHUB_CLIENT_SECRET
+
+  if (!clientId || !clientSecret) return c.redirect(`/login?error=${encodeURIComponent('GitHub OAuth not configured')}`)
+
+  try {
+    // Exchange code for access token
+    const tokenResp = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code }),
+    })
+    const tokenData = await tokenResp.json() as any
+    if (tokenData.error) {
+      return c.redirect(`/login?error=${encodeURIComponent(tokenData.error_description || 'GitHub auth failed')}`)
+    }
+
+    // Get user info
+    const userResp = await fetch('https://api.github.com/user', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}`, 'User-Agent': 'FindGoodDomain' },
+    })
+    const ghUser = await userResp.json() as any
+
+    // Get email (may need separate call)
+    let email = ghUser.email
+    if (!email) {
+      const emailResp = await fetch('https://api.github.com/user/emails', {
+        headers: { Authorization: `Bearer ${tokenData.access_token}`, 'User-Agent': 'FindGoodDomain' },
+      })
+      const emails = await emailResp.json() as any[]
+      const primary = emails?.find((e: any) => e.primary && e.verified)
+      email = primary?.email || emails?.[0]?.email
+    }
+    if (!email) return c.redirect(`/login?error=${encodeURIComponent('Failed to get GitHub email')}`)
+
+    // Auto-login or register
+    let user = users.findByEmail(email.toLowerCase().trim())
+    if (!user) {
+      const passwordHash = await Bun.password.hash('github-' + crypto.randomUUID())
+      users.create(email.toLowerCase().trim(), passwordHash)
+      user = users.findByEmail(email.toLowerCase().trim())
+      if (!user) return c.redirect(`/login?error=${encodeURIComponent('Registration failed')}`)
+      if (ghUser.name || ghUser.login) {
+        users.updateProfile(user.id, { nickname: ghUser.name || ghUser.login })
+      }
+      if (ghUser.avatar_url) {
+        users.updateProfile(user.id, { avatar: ghUser.avatar_url })
+      }
+    }
+
+    const token = await createToken({ id: user.id, email: user.email, nickname: user.nickname || '', avatar: user.avatar || '' })
+    setAuthCookie(c, token)
+    return c.redirect(state)
+  } catch (err) {
+    console.error('GitHub OAuth error:', err)
+    return c.redirect(`/login?error=${encodeURIComponent('GitHub auth error')}`)
+  }
+})
+
 // Unified login-or-register: if email exists → verify password & login; if not → register
 authRoutes.post('/login', async (c) => {
   try {

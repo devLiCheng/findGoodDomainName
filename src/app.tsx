@@ -151,9 +151,10 @@ app.get('/login', async (c) => {
   const error = c.req.query('error') || undefined
   const redirect = c.req.query('redirect') || '/'
   const googleClientId = process.env.GOOGLE_CLIENT_ID
+  const githubClientId = process.env.GITHUB_CLIENT_ID
   return c.html(
     <Layout lang={lang}>
-      <LoginPage lang={lang} error={error} redirect={redirect} googleClientId={googleClientId} />
+      <LoginPage lang={lang} error={error} redirect={redirect} googleClientId={googleClientId} githubClientId={githubClientId} />
     </Layout>
   )
 })
