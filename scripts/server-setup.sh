@@ -1,8 +1,8 @@
 #!/bin/bash
-# Server setup: Nginx + Let's Encrypt SSL + Firewall
-# Run ONCE on your Ubuntu server:
-#   bash scripts/server-setup.sh
-# Prerequisites: Domain DNS must already point to this server's IP
+# Server setup: Nginx + Let's Encrypt SSL
+# Run ONCE on Ubuntu server:
+#   bash scripts/server-setup.sh www.zhutuan.top
+# Prerequisites: Domain DNS A record must point to THIS server's IP
 
 set -e
 
@@ -16,45 +16,91 @@ echo "Server IP: $SERVER_IP"
 echo ""
 
 # 1. Check DNS
-echo "[1/6] Checking DNS for $DOMAIN..."
-DNS_IP=$(dig +short "$DOMAIN" A 2>/dev/null || nslookup "$DOMAIN" 2>/dev/null | grep -A1 "Name:" | tail -1 | awk '{print $NF}')
-if [ -z "$DNS_IP" ]; then
-  echo "   WARNING: Could not resolve $DOMAIN DNS. Make sure DNS A record points to $SERVER_IP"
-  echo "   Continuing anyway..."
+echo "[1/5] Checking DNS..."
+if command -v dig &> /dev/null; then
+  DNS_IP=$(dig +short "$DOMAIN" A 2>/dev/null)
+elif command -v nslookup &> /dev/null; then
+  DNS_IP=$(nslookup "$DOMAIN" 2>/dev/null | grep -A1 "Name:" | tail -1 | awk '{print $NF}')
 else
-  echo "   $DOMAIN resolves to $DNS_IP"
+  DNS_IP=""
 fi
 
-# 2. Install Nginx
-echo "[2/6] Installing Nginx..."
+if [ -z "$DNS_IP" ]; then
+  echo "   WARNING: Cannot resolve $DOMAIN. Ensure DNS A record points to $SERVER_IP"
+elif [ "$DNS_IP" != "$SERVER_IP" ]; then
+  echo "   ERROR: $DOMAIN resolves to $DNS_IP, but server IP is $SERVER_IP"
+  echo "   Please update DNS A record for $DOMAIN to point to $SERVER_IP first!"
+  echo "   Then re-run: bash scripts/server-setup.sh $DOMAIN"
+  exit 1
+else
+  echo "   DNS OK: $DOMAIN -> $DNS_IP"
+fi
+
+# 2. Install packages
+echo "[2/5] Installing Nginx + Certbot..."
+apt-get update -qq
 if ! command -v nginx &> /dev/null; then
-  apt-get update -qq
   apt-get install -y -qq nginx
   systemctl enable nginx
-  systemctl start nginx
-  echo "   Nginx installed"
-else
-  echo "   Nginx already installed: $(nginx -v 2>&1)"
 fi
-
-# 3. Install Certbot (Let's Encrypt)
-echo "[3/6] Installing Certbot..."
 if ! command -v certbot &> /dev/null; then
-  apt-get install -y -qq certbot python3-certbot-nginx
-  echo "   Certbot installed"
-else
-  echo "   Certbot already installed: $(certbot --version 2>&1 | head -1)"
+  apt-get install -y -qq certbot
 fi
+echo "   Ready: nginx=$(nginx -v 2>&1 | cut -d/ -f2) certbot=$(certbot --version 2>&1 | head -1 | awk '{print $2}')"
 
-# 4. Create Nginx config for the domain
-echo "[4/6] Creating Nginx config..."
-cat > "/etc/nginx/sites-available/$DOMAIN" << NGINXEOF
-# HTTP — redirect to HTTPS
+# 3. Create HTTP-only Nginx config (SSL added after cert is obtained)
+echo "[3/5] Creating Nginx config (HTTP only)..."
+cat > "/etc/nginx/sites-available/$DOMAIN" << 'NGINXEOF'
+# HTTP server
 server {
     listen 80;
+    listen [::]:80;
+    server_name DOMAIN_PLACEHOLDER;
+
+    # ACME challenge for Let's Encrypt
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+NGINXEOF
+
+sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" "/etc/nginx/sites-available/$DOMAIN"
+
+ln -sf "/etc/nginx/sites-available/$DOMAIN" "/etc/nginx/sites-enabled/$DOMAIN"
+rm -f /etc/nginx/sites-enabled/default
+nginx -t && systemctl reload nginx
+echo "   HTTP config created"
+
+# 4. Get SSL certificate
+echo "[4/5] Getting SSL certificate..."
+certbot certonly --webroot -w /var/www/html \
+  -d "$DOMAIN" \
+  --non-interactive --agree-tos --email "$EMAIL" 2>&1
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "   ERROR: Certificate request failed."
+  echo "   Make sure:"
+  echo "   1. DNS A record for $DOMAIN points to $SERVER_IP"
+  echo "   2. Port 80 is open (ufw allow 80)"
+  echo "   3. No other web server is running on port 80"
+  exit 1
+fi
+echo "   Certificate obtained"
+
+# 5. Add HTTPS server block with proxy to Bun app
+echo "[5/5] Adding HTTPS + reverse proxy..."
+cat > "/etc/nginx/sites-available/$DOMAIN" << NGINXEOF
+# HTTP - ACME challenge + redirect to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
     server_name $DOMAIN;
 
-    # Let's Encrypt verification
     location /.well-known/acme-challenge/ {
         root /var/www/html;
     }
@@ -64,16 +110,19 @@ server {
     }
 }
 
-# HTTPS — reverse proxy to Bun app
+# HTTPS - reverse proxy to Bun app
 server {
     listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name $DOMAIN;
 
-    # SSL managed by Certbot
     ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Modern SSL config
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
 
     # Security headers
     add_header Strict-Transport-Security "max-age=63072000" always;
@@ -95,53 +144,25 @@ server {
 }
 NGINXEOF
 
-ln -sf "/etc/nginx/sites-available/$DOMAIN" "/etc/nginx/sites-enabled/$DOMAIN"
-rm -f /etc/nginx/sites-enabled/default
-
-# Test and reload nginx config (HTTP only at this point)
-# Remove SSL lines temporarily for certbot to work
-sed -i 's/listen 443/#listen 443/' "/etc/nginx/sites-available/$DOMAIN"
-nginx -t && systemctl reload nginx
-echo "   Nginx HTTP config created"
-
-# 5. Get SSL certificate
-echo "[5/6] Getting SSL certificate from Let's Encrypt..."
-# Restore HTTPS config
-sed -i 's/#listen 443/listen 443/' "/etc/nginx/sites-available/$DOMAIN"
-
-certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email "$EMAIL" --redirect 2>&1 || {
-  echo "   Certbot auto-config failed, trying manual..."
-  certbot certonly --webroot -w /var/www/html -d "$DOMAIN" --non-interactive --agree-tos --email "$EMAIL" 2>&1
-}
-
 nginx -t && systemctl reload nginx
 
-# Verify cert renewal timer
-if systemctl is-active --quiet certbot.timer 2>/dev/null; then
-  echo "   Certbot auto-renewal timer: ACTIVE"
-else
-  echo "   Setting up auto-renewal..."
-  echo "0 3 * * * root certbot renew --quiet --post-hook 'systemctl reload nginx'" > /etc/cron.d/certbot-renewal
-  echo "   Auto-renewal cronjob created (daily 3am)"
-fi
-
-# 6. Configure firewall
-echo "[6/6] Configuring firewall..."
+# Configure firewall
 if command -v ufw &> /dev/null; then
   ufw allow 80/tcp 2>/dev/null || true
   ufw allow 443/tcp 2>/dev/null || true
   ufw allow 22/tcp 2>/dev/null || true
-  echo "   Firewall: HTTP(80), HTTPS(443), SSH(22) allowed"
+fi
+
+# Setup auto-renewal cron
+if [ ! -f /etc/cron.d/certbot-renewal ]; then
+  echo "0 3 * * * root certbot renew --quiet --post-hook 'systemctl reload nginx'" > /etc/cron.d/certbot-renewal
 fi
 
 echo ""
 echo "=== Setup Complete ==="
 echo ""
-echo "  Domain:   https://$DOMAIN"
-echo "  Proxied to: http://127.0.0.1:$APP_PORT"
+echo "  https://$DOMAIN"
 echo ""
-echo "Next steps:"
-echo "  1. Deploy the app: bash scripts/start.sh"
-echo "  2. SSL auto-renews via certbot timer (check: systemctl status certbot.timer)"
-echo "  3. Test: curl https://$DOMAIN"
+echo "  SSL auto-renewal: daily at 3am (check: cat /etc/cron.d/certbot-renewal)"
+echo "  Next step: bash scripts/start.sh"
 echo ""
